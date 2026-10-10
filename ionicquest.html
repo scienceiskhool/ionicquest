@@ -1,0 +1,1396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ionic Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+/* Layout: Arcade Punch (light, brand colours) for training and results; dark neon arcade for the boss fight. */
+:root {
+  --orange: #FF8243; --pink: #FFC0CB; --yellow: #FCE883; --teal: #069494; --teal-ink: #057A7A;
+  --orange-tint: #FFE6DA; --pink-tint: #FFEEF1; --yellow-tint: #FEF8D9; --teal-tint: #DDF2F2;
+  --ink: #1F2A2E; --muted: #56656A; --line: #E4E8E9; --bg: #FFFFFF;
+  --good: #1E9E62; --good-tint: #D8F3E4; --bad: #E2463A;
+  --b: 3px solid var(--ink);
+  --font: "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --pixel: "Press Start 2P", ui-monospace, "Courier New", monospace;
+  /* boss arena */
+  --night: #0D0B1A; --night-2: #19152E; --night-3: #2A2448;
+  --neon-teal: #2EF2E0; --neon-pink: #FF7FB0; --neon-yellow: #FCE883; --neon-orange: #FF8243; --neon-red: #FF4D5E;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body {
+  font: 16px/1.5 var(--font); min-height: 100vh; min-height: 100dvh;
+  display: flex; flex-direction: column;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  transition: background .3s;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+[hidden] { display: none !important; }
+.sub { font-size: .68em; position: relative; bottom: -.25em; line-height: 0; }
+sup { font-size: .68em; line-height: 0; position: relative; top: -.1em; vertical-align: super; font-weight: 800; }
+:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
+
+/* ---------- shared pieces ---------- */
+.wrap { width: 100%; max-width: 1040px; margin: 0 auto; padding: 16px; flex: 1; display: flex; flex-direction: column; }
+.card { background: #fff; border: var(--b); border-radius: 22px; box-shadow: 6px 6px 0 var(--ink); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: var(--b); border-radius: 16px; padding: 14px 18px; font-weight: 800; font-size: 1.1rem;
+  background: var(--orange); color: var(--ink); box-shadow: 0 5px 0 var(--ink);
+  transition: transform .08s, box-shadow .08s; user-select: none; -webkit-user-select: none;
+}
+.btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.big { width: 100%; font-size: 1.15rem; text-transform: uppercase; letter-spacing: .03em; padding: 16px; }
+.btn.alt { background: #fff; }
+.btn.teal { background: var(--teal); color: #fff; }
+.btn.yellow { background: var(--yellow); }
+.btn.sm { padding: 9px 14px; font-size: .95rem; border-radius: 12px; box-shadow: 0 3px 0 var(--ink); }
+.pill { display: inline-block; font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; border: 2px solid var(--ink); border-radius: 99px; padding: 2px 10px; background: #fff; }
+.icon-btn { width: 42px; height: 42px; border-radius: 12px; border: var(--b); background: #fff; display: grid; place-items: center; box-shadow: 0 3px 0 var(--ink); padding: 0; flex: none; }
+.icon-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.icon-btn svg { width: 20px; height: 20px; }
+
+/* ---------- top bar ---------- */
+.topbar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 2px solid var(--line); background: #fff; }
+.topbar .brand { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; text-decoration: none; color: var(--ink); }
+.topbar .brand img { width: 38px; height: 38px; border-radius: 50%; border: 2.5px solid var(--ink); background: var(--yellow); object-fit: cover; flex: none; }
+.topbar .brand b { font-weight: 800; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.topbar .brand small { display: block; font-size: .72rem; color: var(--muted); font-weight: 600; line-height: 1.2; }
+
+/* ---------- start screen ---------- */
+.start { display: grid; gap: 22px; grid-template-columns: 1fr; align-items: start; margin: auto 0; padding-block: 8px 20px; }
+.hero { background: var(--teal); color: #fff; padding: 22px; position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 14px; }
+.hero h1 { margin: 6px 0 0; font-size: clamp(2rem, 7vw, 3rem); line-height: 1.05; font-weight: 800; letter-spacing: -.01em; text-wrap: balance; }
+.hero h1 em { font-style: normal; background: var(--yellow); color: var(--ink); border: var(--b); border-radius: 14px; padding: 0 10px; display: inline-block; transform: rotate(-2deg); }
+.hero p { margin: 0; max-width: 40ch; font-weight: 600; }
+.hero .pill { color: var(--ink); align-self: flex-start; }
+.demo { background: #fff; color: var(--ink); border: var(--b); border-radius: 16px; padding: 12px 14px; font-weight: 700; display: flex; flex-direction: column; gap: 6px; font-size: .95rem; }
+.demo .row1 { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
+.demo s { color: var(--muted); text-decoration-thickness: 2px; text-decoration-color: var(--bad); }
+.demo .net { background: var(--yellow); border: 2px solid var(--ink); border-radius: 10px; padding: 2px 8px; align-self: flex-start; }
+.demo small { font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal-ink); }
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mode-card { padding: 12px; border: var(--b); border-radius: 16px; background: var(--yellow-tint); color: var(--ink); }
+.mode-card.dark { background: var(--night); color: #fff; }
+.mode-card b { display: block; font-weight: 800; }
+.mode-card.dark b { font-family: var(--pixel); font-size: .72rem; color: var(--neon-yellow); line-height: 1.6; }
+.mode-card span { font-size: .85rem; display: block; line-height: 1.4; margin-top: 4px; }
+.form { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.form h2 { margin: 0; font-size: 1.25rem; font-weight: 800; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.fields .full { grid-column: 1 / -1; }
+label.f { display: flex; flex-direction: column; gap: 4px; font-weight: 700; font-size: .9rem; }
+label.f input, label.f select { font-size: 16px; padding: 12px; border: 2.5px solid var(--ink); border-radius: 12px; background: #fff; width: 100%; min-width: 0; }
+label.f input:focus, label.f select:focus { outline: 3px solid var(--yellow); outline-offset: 1px; }
+.grp { display: flex; flex-direction: column; gap: 6px; }
+.grp > span { font-weight: 700; font-size: .9rem; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border: 2.5px solid var(--ink); border-radius: 12px; background: #fff; padding: 8px 12px; font-weight: 700; font-size: .9rem; box-shadow: 0 3px 0 var(--ink); }
+.chip[aria-pressed="true"] { background: var(--yellow); }
+.seg .chip { text-align: center; }
+.seg .chip small { display: block; font-weight: 600; font-size: .75rem; color: var(--muted); }
+.form-err { color: var(--bad); font-weight: 700; font-size: .9rem; min-height: 1.2em; margin: -4px 0 0; }
+.go-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn.boss-btn { background: var(--night); color: var(--neon-yellow); font-family: var(--pixel); font-size: .78rem; line-height: 1.5; }
+.best { display: flex; justify-content: space-between; font-size: .9rem; color: var(--muted); font-weight: 700; }
+.best b { color: var(--ink); }
+@media (min-width: 760px) { .start { grid-template-columns: 1.05fr 1fr; gap: 28px; } }
+@media (max-width: 420px) { .modes, .go-row { grid-template-columns: 1fr; } }
+
+/* ---------- training ---------- */
+.train { display: flex; flex-direction: column; border: var(--b); border-radius: 22px; overflow: hidden; box-shadow: 6px 6px 0 var(--ink); background: #fff; margin-block: 4px 16px; }
+.hud { background: var(--teal); color: #fff; padding: 14px; display: flex; flex-direction: column; gap: 10px; border-bottom: var(--b); }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.score { font-size: 2rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.score small { display: block; font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; opacity: .9; margin-bottom: 2px; }
+.round-tag { font-weight: 800; font-size: .8rem; letter-spacing: .08em; text-align: right; }
+.round-tag span { display: block; font-size: .7rem; opacity: .9; letter-spacing: .06em; }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.stp { background: rgba(255,255,255,.18); border: 2px solid rgba(255,255,255,.5); border-radius: 12px; padding: 6px 4px; text-align: center; font-weight: 800; font-size: .74rem; line-height: 1.2; }
+.stp i { display: block; font-style: normal; font-size: 1rem; }
+.stp.now { background: var(--yellow); color: var(--ink); border-color: var(--ink); box-shadow: 0 3px 0 var(--ink); }
+.stp.done { background: #fff; color: var(--teal-ink); border-color: var(--ink); }
+.stp.done.miss { color: var(--orange); }
+
+.board { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.instr { margin: 0; font-weight: 700; font-size: 1.02rem; display: flex; gap: 10px; align-items: flex-start; }
+.instr b.n { flex: none; width: 30px; height: 30px; border-radius: 50%; border: var(--b); background: var(--yellow); display: grid; place-items: center; font-size: .95rem; }
+.rx-tag { font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 -6px; }
+.eqbox { display: grid; grid-template-columns: 1fr; gap: 8px; align-items: stretch; }
+.side { border: var(--b); border-radius: 18px; padding: 10px 10px 12px; background: var(--yellow-tint); min-width: 0; }
+.side.r { background: var(--pink-tint); }
+.side > small { display: block; font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px 2px; }
+.terms { display: flex; flex-wrap: wrap; gap: 8px 6px; align-items: center; }
+.terms .plus { font-weight: 800; color: var(--teal-ink); font-size: 1.1rem; }
+.arrow { text-align: center; font-weight: 800; font-size: 1.6rem; line-height: 1; color: var(--ink); }
+.term {
+  border: 2.5px solid var(--ink); border-radius: 12px; background: #fff; padding: 7px 10px; font-weight: 800; font-size: 1.12rem;
+  box-shadow: 0 3px 0 var(--ink); white-space: nowrap; display: inline-flex; align-items: baseline; gap: 1px; min-height: 44px;
+  transition: transform .08s, box-shadow .08s, opacity .3s, background .15s;
+}
+.term:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.term .co { color: var(--teal-ink); margin-right: 2px; }
+.term .st { font-weight: 700; font-size: .78em; color: var(--muted); margin-left: 2px; }
+.term .st.q { color: var(--orange); border: 2px dashed var(--orange); border-radius: 8px; padding: 0 4px; margin-left: 4px; }
+.term .st.set { color: var(--teal-ink); }
+.term.sel { background: var(--yellow); outline: 3px solid var(--orange); outline-offset: 2px; }
+.term.bad { background: var(--orange-tint); animation: shake .35s; }
+.term.bad .st { color: var(--bad); }
+.term.good { background: var(--good-tint); }
+.term.ion { background: var(--teal-tint); }
+.term.ion.sel { background: var(--yellow); }
+.term.flag { outline: 3px dashed var(--orange); outline-offset: 2px; }
+.term.pop { animation: pop .35s ease-out; }
+.term.gone { opacity: .45; background: transparent; box-shadow: none; border-style: dashed; text-decoration: line-through; text-decoration-color: var(--bad); text-decoration-thickness: 3px; }
+.term.static { box-shadow: none; }
+@keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+@keyframes pop { 0% { transform: scale(.6); } 70% { transform: scale(1.08); } 100% { transform: scale(1); } }
+
+.tools { display: flex; flex-direction: column; gap: 10px; }
+.states { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.states .btn { font-size: 1.15rem; padding: 12px 4px; background: #fff; }
+.states .btn small { display: block; font-size: .62rem; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
+.states .btn { flex-direction: column; gap: 0; }
+.tool-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.tool-row .btn { flex: 1 1 180px; }
+.simp { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.simp .btn { background: #fff; justify-content: flex-start; text-align: left; }
+.simp .btn.wrong { background: var(--orange-tint); text-decoration: line-through; }
+.final { border: var(--b); border-radius: 16px; background: var(--yellow); padding: 12px; text-align: center; font-weight: 800; font-size: 1.2rem; display: flex; flex-direction: column; gap: 4px; }
+.final small { font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; }
+.final .tm { white-space: nowrap; }
+.final .st { font-weight: 700; font-size: .78em; }
+
+.tfb { border: var(--b); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.tfb.ok { background: var(--good-tint); }
+.tfb.no { background: var(--orange-tint); }
+.tfb.info { background: var(--teal-tint); }
+.tfb p { margin: 0; font-weight: 600; }
+.tfb ul { margin: 0; padding-left: 1.2em; font-weight: 600; font-size: .95rem; }
+.tfb h3 { margin: 0; font-size: 1.1rem; font-weight: 800; }
+@media (min-width: 760px) {
+  .eqbox { grid-template-columns: 1fr auto 1fr; }
+  .arrow { align-self: center; font-size: 2rem; }
+  .board { padding: 20px; }
+}
+
+/* ---------- modal ---------- */
+.modal { position: fixed; inset: 0; background: rgba(31,42,46,.55); display: grid; place-items: center; padding: 16px; z-index: 40; }
+.modal .card { max-width: 560px; width: 100%; max-height: 90vh; overflow: auto; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.modal h2 { margin: 0; font-size: 1.25rem; font-weight: 800; }
+.sol { width: 100%; border-collapse: separate; border-spacing: 0; border: 2.5px solid var(--ink); border-radius: 14px; overflow: hidden; font-size: .93rem; }
+.sol th, .sol td { padding: 8px 10px; text-align: left; vertical-align: top; border-bottom: 2px solid var(--line); }
+.sol tr:last-child td { border-bottom: 0; }
+.sol th { background: var(--teal); color: #fff; font-weight: 800; }
+.sol td:first-child { font-weight: 800; width: 42%; }
+.sol .yes { color: var(--good); font-weight: 800; }
+.sol .no { color: var(--bad); font-weight: 800; }
+.note { font-size: .88rem; color: var(--muted); margin: 0; font-weight: 600; }
+
+/* ---------- boss fight (dark arcade) ---------- */
+body.dark { background: var(--night); }
+body.dark .topbar { background: var(--night); border-bottom-color: var(--night-3); }
+body.dark .topbar .brand, body.dark .topbar .brand small { color: #fff; }
+body.dark .icon-btn { background: var(--night-2); border-color: var(--neon-teal); color: var(--neon-teal); box-shadow: 0 3px 0 var(--neon-teal); }
+body.dark footer { color: #8C86A8; }
+body.dark footer a { color: var(--neon-teal); }
+.boss { display: flex; flex-direction: column; gap: 14px; color: #fff; margin-block: 4px 16px; position: relative; }
+.arena { border: 3px solid var(--neon-teal); border-radius: 6px; background: var(--night-2); box-shadow: 0 0 0 3px var(--night), 0 0 22px rgba(46,242,224,.35); overflow: hidden; position: relative; }
+.arena::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 2px, transparent 2px 4px); }
+.bhud { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 12px 12px 0; font-family: var(--pixel); font-size: .62rem; line-height: 1.6; position: relative; z-index: 2; }
+.hp-who { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.hp-who.boss-side { align-items: flex-end; text-align: right; flex: 1; }
+.hearts { display: flex; gap: 4px; }
+.hearts svg { width: 22px; height: 20px; }
+.hearts .lost { opacity: .22; }
+.hearts .breaking { animation: heartbreak .6s; }
+@keyframes heartbreak { 0% { transform: scale(1); } 40% { transform: scale(1.5) rotate(-12deg); } 100% { transform: scale(1); } }
+.hpbar { width: min(220px, 100%); height: 16px; border: 3px solid #fff; background: var(--night); padding: 2px; }
+.hpbar i { display: block; height: 100%; background: var(--neon-pink); width: 100%; transition: width .45s steps(8); }
+.hpbar i.low { background: var(--neon-red); }
+.bname { color: var(--neon-pink); }
+.hname { color: var(--neon-teal); }
+.stage { position: relative; height: 210px; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 6% 18px; }
+.stage::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 46px; background:
+  linear-gradient(transparent 0 0), repeating-linear-gradient(90deg, rgba(46,242,224,.35) 0 2px, transparent 2px 40px), linear-gradient(var(--night-3), var(--night)); border-top: 2px solid var(--neon-teal); }
+.stars { position: absolute; inset: 0; background-image: radial-gradient(1.5px 1.5px at 12% 20%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 38% 12%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 62% 28%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 84% 10%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 92% 34%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 24% 40%, #fff 50%, transparent 51%); opacity: .7; }
+.sprite { position: relative; z-index: 1; image-rendering: pixelated; }
+.sprite svg, .sprite img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+.hero-sp { width: 86px; animation: bob 1s steps(2) infinite; }
+.mon-sp { width: 150px; animation: bob 1.4s steps(2) infinite; }
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.hero-sp.atk { animation: lunge-r .45s steps(4); }
+.mon-sp.atk { animation: lunge-l .5s steps(4); }
+@keyframes lunge-r { 50% { transform: translateX(40px); } }
+@keyframes lunge-l { 50% { transform: translateX(-60px) scale(1.08); } }
+.sprite.hit { animation: hit .5s steps(2); }
+@keyframes hit { 0%,50% { filter: brightness(3) saturate(0); transform: translateX(6px); } 25%,75% { filter: none; transform: translateX(-6px); } 100% { filter: none; transform: none; } }
+.sprite.dead { animation: none; opacity: .25; filter: grayscale(1); transform: translateY(16px) rotate(8deg); transition: all .8s steps(6); }
+.orbit { position: absolute; font-family: var(--pixel); font-size: .7rem; color: var(--neon-yellow); animation: float 2.2s steps(4) infinite; }
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.bolt { position: absolute; left: 22%; bottom: 70px; width: 26px; height: 26px; z-index: 3; opacity: 0; }
+.bolt.fly { animation: fly .45s steps(6) forwards; }
+@keyframes fly { 0% { opacity: 1; left: 22%; transform: rotate(0); } 90% { opacity: 1; } 100% { opacity: 0; left: 66%; transform: rotate(360deg); } }
+.dmg { position: absolute; z-index: 4; font-family: var(--pixel); font-size: .9rem; color: var(--neon-yellow); text-shadow: 2px 2px 0 var(--night); animation: rise 1s steps(8) forwards; pointer-events: none; }
+.dmg.hurt { color: var(--neon-red); }
+@keyframes rise { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-50px); opacity: 0; } }
+.flash { position: absolute; inset: 0; background: var(--neon-red); opacity: 0; pointer-events: none; z-index: 5; }
+.flash.on { animation: flash .4s steps(2); }
+@keyframes flash { 0%,50% { opacity: .35; } 100% { opacity: 0; } }
+.charge { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-top: 3px solid var(--neon-teal); font-family: var(--pixel); font-size: .55rem; line-height: 1.5; color: var(--neon-pink); position: relative; z-index: 2; background: var(--night); }
+.charge .cbar { flex: 1; height: 14px; border: 2px solid var(--neon-pink); padding: 2px; min-width: 60px; }
+.charge .cbar i { display: block; height: 100%; width: 0; background: var(--neon-pink); }
+.charge.warn .cbar i { background: var(--neon-red); }
+.charge b { color: #fff; min-width: 2.5em; text-align: right; font-weight: 400; }
+.phase { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); font-family: var(--pixel); color: var(--neon-red); font-size: 1rem; text-shadow: 3px 3px 0 var(--night); z-index: 6; white-space: nowrap; animation: blink .5s steps(1) 4; }
+@keyframes blink { 50% { opacity: 0; } }
+
+.qbox { border: 3px solid #fff; border-radius: 6px; background: var(--night); padding: 14px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 0 0 3px var(--night-3); }
+.qtype { margin: 0; font-family: var(--pixel); font-size: .6rem; color: var(--neon-yellow); line-height: 1.6; }
+.qtext { margin: 0; font-weight: 700; font-size: 1.02rem; }
+.qeq { background: var(--night-2); border: 2px dashed var(--night-3); border-radius: 6px; padding: 10px; font-weight: 700; font-size: 1.02rem; line-height: 1.7; }
+.qopts { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.qopt { display: flex; gap: 10px; align-items: center; text-align: left; border: 3px solid var(--neon-teal); background: var(--night-2); color: #fff; border-radius: 6px; padding: 10px 12px; font-weight: 700; font-size: 1rem; box-shadow: 0 4px 0 var(--neon-teal); line-height: 1.6; transition: transform .08s, box-shadow .08s; }
+.qopt:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--neon-teal); }
+.qopt .k { flex: none; width: 30px; height: 30px; display: grid; place-items: center; font-family: var(--pixel); font-size: .7rem; background: var(--neon-teal); color: var(--night); }
+.qopt .tx { min-width: 0; }
+.qopt.right { border-color: #4CF08A; box-shadow: 0 4px 0 #4CF08A; background: #12351F; }
+.qopt.right .k { background: #4CF08A; }
+.qopt.wrong { border-color: var(--neon-red); box-shadow: 0 4px 0 var(--neon-red); background: #3A1420; }
+.qopt.wrong .k { background: var(--neon-red); }
+.qopt:disabled { cursor: default; }
+.qopt:disabled:not(.right):not(.wrong) { opacity: .55; }
+.tm { white-space: nowrap; }
+.qbox .st, .final .st { opacity: .75; font-weight: 600; font-size: .85em; }
+.qfb { border: 3px solid var(--neon-yellow); border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 10px; background: var(--night-2); }
+.qfb.no { border-color: var(--neon-red); }
+.qfb p { margin: 0; font-weight: 600; }
+.qfb .ans { color: #4CF08A; font-weight: 800; }
+.pbtn { font-family: var(--pixel); font-size: .72rem; line-height: 1.5; border: 3px solid var(--night); background: var(--neon-yellow); color: var(--night); padding: 14px 16px; box-shadow: 0 4px 0 var(--neon-orange); border-radius: 4px; }
+.pbtn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--neon-orange); }
+.pbtn.ghost { background: transparent; color: var(--neon-teal); border-color: var(--neon-teal); box-shadow: 0 4px 0 var(--neon-teal); }
+@media (min-width: 760px) {
+  .qopts { grid-template-columns: 1fr 1fr; }
+  .stage { height: 250px; }
+  .hero-sp { width: 110px; }
+  .mon-sp { width: 200px; }
+  .bhud { font-size: .72rem; }
+}
+
+.bend { margin: auto; text-align: center; display: flex; flex-direction: column; gap: 18px; align-items: center; color: #fff; padding: 24px 8px; }
+.bend h2 { font-family: var(--pixel); font-size: clamp(1.4rem, 7vw, 2.4rem); margin: 0; line-height: 1.3; color: var(--neon-yellow); text-shadow: 4px 4px 0 var(--neon-orange); }
+.bend.lose h2 { color: var(--neon-red); text-shadow: 4px 4px 0 var(--night-3); }
+.bend p { margin: 0; font-weight: 600; max-width: 36ch; }
+.bend .sprite { width: 120px; }
+.bend .row { justify-content: center; }
+.start-blink { font-family: var(--pixel); font-size: .6rem; color: var(--neon-teal); animation: blink 1s steps(1) infinite; }
+
+/* ---------- results ---------- */
+.results { display: grid; gap: 18px; grid-template-columns: 1fr; padding-block: 8px 20px; }
+.res-hero { background: var(--teal); color: #fff; padding: 22px; display: flex; gap: 18px; align-items: center; }
+.big-ring { --p: 0; width: 120px; height: 120px; flex: none; border-radius: 50%; border: var(--b); background: conic-gradient(var(--yellow) calc(var(--p) * 1%), #fff 0); display: grid; place-items: center; }
+.big-ring span { width: 88px; height: 88px; border-radius: 50%; background: #fff; color: var(--ink); border: var(--b); display: grid; place-items: center; font-weight: 800; font-size: 1.7rem; }
+.res-hero h2 { margin: 0 0 4px; font-size: 1.6rem; line-height: 1.15; font-weight: 800; text-wrap: balance; }
+.res-hero p { margin: 0; font-weight: 600; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.stat { border: var(--b); border-radius: 14px; padding: 8px 10px; background: #fff; box-shadow: 0 4px 0 var(--ink); }
+.stat span { display: block; font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.stat b { font-size: 1.3rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.stat:nth-child(1) { background: var(--yellow-tint); } .stat:nth-child(2) { background: var(--pink-tint); } .stat:nth-child(3) { background: var(--teal-tint); } .stat:nth-child(4) { background: var(--orange-tint); }
+.panel { padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.panel h3 { margin: 0; font-size: 1.15rem; font-weight: 800; }
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.bar-row { display: grid; grid-template-columns: 10.5em 1fr 3.2em; gap: 10px; align-items: center; font-weight: 700; font-size: .92rem; }
+.bar { height: 14px; border: 2px solid var(--ink); border-radius: 99px; overflow: hidden; background: #fff; }
+.bar i { display: block; height: 100%; background: var(--teal); }
+.bar i.low { background: var(--orange); }
+.bar-row .n { text-align: right; font-variant-numeric: tabular-nums; }
+.weak { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.weak li { border: 2.5px solid var(--ink); border-radius: 14px; padding: 10px 12px; background: var(--orange-tint); }
+.weak li b { display: block; }
+.weak li span { font-size: .9rem; }
+.weak li.good { background: var(--good-tint); }
+.review { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.review li { border-bottom: 2px solid var(--line); padding: 6px 0 8px; font-size: .95rem; }
+.review li:last-child { border-bottom: 0; }
+.review .you { color: var(--bad); font-weight: 700; }
+.review .key { color: var(--good); font-weight: 800; }
+.review .st { color: var(--muted); font-size: .85em; }
+.send { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-weight: 700; padding: 12px 14px; border: 2.5px solid var(--ink); border-radius: 14px; background: var(--teal-tint); }
+.send.err { background: var(--orange-tint); }
+.res-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.res-actions .btn { flex: 1 1 200px; }
+@media (min-width: 760px) {
+  .results { grid-template-columns: 1fr 1fr; align-items: start; }
+  .results .span { grid-column: 1 / -1; }
+}
+@media (max-width: 480px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .res-hero { flex-direction: column; text-align: center; }
+  .bar-row { grid-template-columns: 8.6em 1fr 3em; font-size: .85rem; }
+}
+
+footer { text-align: center; color: var(--muted); font-size: .82rem; padding: 14px 16px 20px; }
+footer a { color: var(--teal-ink); font-weight: 700; }
+canvas#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="https://scienceiskhool.github.io/scienceiskhool/" target="_blank" rel="noopener">
+    <img src="https://scienceiskhool.github.io/scienceiskhool/assets/img/head.png" alt="" onerror="this.style.visibility='hidden'">
+    <span><b>Ionic Quest</b><small>Science is Khool · Ionic equations</small></span>
+  </a>
+  <button class="icon-btn" id="btn-quit" type="button" aria-label="Back to start" title="Back to start" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8"/><path d="M5 10v10h14V10"/></svg>
+  </button>
+  <button class="icon-btn" id="btn-sound" type="button" aria-label="Sound on" title="Sound">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
+  </button>
+</header>
+
+<main class="wrap">
+
+  <!-- START -->
+  <section id="scr-start" class="start">
+    <div class="card hero">
+      <span class="pill">Sec 3–4 Chemistry · Ionic equations</span>
+      <h1>Ionic <em>Quest</em></h1>
+      <p>Strip a chemical equation down to the ions that actually react. Train step by step, then take on the boss.</p>
+      <div class="demo" aria-label="Example">
+        <small>Example</small>
+        <div class="row1"><span>Ag<sup>+</sup>(aq)</span>+<s>NO<span class="sub">3</span><sup>−</sup>(aq)</s>+<s>Na<sup>+</sup>(aq)</s>+<span>Cl<sup>−</sup>(aq)</span>→<span>AgCl(s)</span>+<s>Na<sup>+</sup>(aq)</s>+<s>NO<span class="sub">3</span><sup>−</sup>(aq)</s></div>
+        <span class="net">Ag<sup>+</sup>(aq) + Cl<sup>−</sup>(aq) → AgCl(s)</span>
+      </div>
+      <div class="modes">
+        <div class="mode-card"><b>Training</b><span>5 equations. Add states, split, cancel spectators, simplify.</span></div>
+        <div class="mode-card dark"><b>BOSS FIGHT</b><span>Answer before SPECTRON finishes charging. Correct answers hit back.</span></div>
+      </div>
+    </div>
+
+    <form class="card form" id="form-start" novalidate>
+      <h2>Ready, player?</h2>
+      <div class="grp">
+        <span id="lbl-course">Course</span>
+        <div class="seg" role="group" aria-labelledby="lbl-course">
+          <button type="button" class="chip" id="lv-easy" data-lv="easy" aria-pressed="true">Combined Science<small>Core reactions</small></button>
+          <button type="button" class="chip" id="lv-hard" data-lv="hard" aria-pressed="false">Pure Chemistry<small>Adds tricky cases</small></button>
+        </div>
+      </div>
+      <div class="grp">
+        <span id="lbl-types">Reactions</span>
+        <div class="chips" id="types" role="group" aria-labelledby="lbl-types"></div>
+      </div>
+      <div class="fields">
+        <label class="f full" for="in-name">Name<input id="in-name" name="name" maxlength="60" autocomplete="name" required></label>
+        <label class="f" for="in-cls">Class<select id="in-cls" name="cls" required><option value="">Choose…</option></select></label>
+        <label class="f" for="in-reg">Register no.<input id="in-reg" name="reg" inputmode="numeric" pattern="[0-9]*" maxlength="2" required></label>
+      </div>
+      <p class="form-err" id="form-err" role="alert"></p>
+      <div class="go-row">
+        <button class="btn big" type="button" id="btn-train">Training ▶</button>
+        <button class="btn big boss-btn" type="button" id="btn-boss">Boss fight</button>
+      </div>
+      <div class="best"><span>Your best on this device</span><b id="txt-best">–</b></div>
+    </form>
+  </section>
+
+  <!-- TRAINING -->
+  <section id="scr-train" class="train" hidden>
+    <div class="hud">
+      <div class="row">
+        <div class="score"><small>Points</small><span id="t-points">0</span></div>
+        <div class="round-tag" id="t-round">EQUATION 1/5<span>Precipitation</span></div>
+      </div>
+      <div class="steps" id="t-steps"></div>
+    </div>
+    <div class="board">
+      <p class="instr" id="t-instr"></p>
+      <div class="eqbox" id="t-eq"></div>
+      <div class="tools" id="t-tools"></div>
+      <div class="tfb" id="t-fb" hidden aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- BOSS -->
+  <section id="scr-boss" class="boss" hidden>
+    <div class="arena">
+      <div class="stars"></div>
+      <div class="bhud">
+        <div class="hp-who"><span class="hname">HERO</span><div class="hearts" id="b-hearts"></div></div>
+        <div class="hp-who boss-side"><span class="bname" id="b-name">SPECTRON</span><div class="hpbar"><i id="b-hp"></i></div></div>
+      </div>
+      <div class="stage" id="b-stage">
+        <div class="sprite hero-sp" id="b-hero"></div>
+        <div class="bolt" id="b-bolt"></div>
+        <div class="sprite mon-sp" id="b-mon"></div>
+        <div class="flash" id="b-flash"></div>
+      </div>
+      <div class="charge" id="b-charge"><span id="b-charge-lbl">SPECTRON IS CHARGING</span><div class="cbar"><i id="b-cbar"></i></div><b id="b-secs">30</b></div>
+    </div>
+    <div class="qbox">
+      <p class="qtype" id="b-qtype">INCOMING ATTACK</p>
+      <p class="qtext" id="b-qtext"></p>
+      <div class="qeq" id="b-qeq"></div>
+      <div class="qopts" id="b-opts"></div>
+      <div class="qfb" id="b-fb" hidden aria-live="polite"><p id="b-fb-msg"></p><button class="pbtn" type="button" id="b-next">NEXT ▶</button></div>
+    </div>
+  </section>
+
+  <section id="scr-bend" class="bend" hidden>
+    <h2 id="be-title">VICTORY!</h2>
+    <div class="sprite" id="be-sprite"></div>
+    <p id="be-msg"></p>
+    <span class="start-blink">PRESS BUTTON TO CONTINUE</span>
+    <button class="pbtn" type="button" id="be-go">SEE RESULTS ▶</button>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="scr-result" class="results" hidden>
+    <div class="card res-hero span">
+      <div class="big-ring" id="res-ring"><span id="res-pct">0%</span></div>
+      <div><h2 id="res-title">Nice work!</h2><p id="res-sub"></p></div>
+    </div>
+    <div class="stats span">
+      <div class="stat"><span id="res-l1">Correct</span><b id="res-correct">0</b></div>
+      <div class="stat"><span>Accuracy</span><b id="res-acc">0%</b></div>
+      <div class="stat"><span>Time</span><b id="res-time">0:00</b></div>
+      <div class="stat"><span>Points</span><b id="res-points">0</b></div>
+    </div>
+    <div class="card panel">
+      <h3 id="res-bars-h">How you did</h3>
+      <div class="bars" id="res-bars"></div>
+      <h3>Work on these</h3>
+      <ul class="weak" id="res-weak"></ul>
+    </div>
+    <div class="card panel">
+      <h3>Review</h3>
+      <ul class="review" id="res-review"></ul>
+    </div>
+    <div class="send span" id="send" aria-live="polite"><span id="send-msg">Sending your results…</span><button class="btn alt sm" id="btn-resend" type="button" hidden>Try again</button></div>
+    <div class="res-actions span">
+      <button class="btn big" id="btn-again" type="button">Play again ↻</button>
+      <button class="btn big boss-btn" id="btn-toboss" type="button">Boss fight</button>
+      <button class="btn big alt" id="btn-home" type="button">Change settings</button>
+    </div>
+  </section>
+</main>
+
+<div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-h">
+  <div class="card">
+    <h2 id="modal-h">Solubility of salts in water</h2>
+    <table class="sol">
+      <tr><th>Compounds</th><th>Soluble?</th></tr>
+      <tr><td>Sodium, potassium and ammonium salts</td><td><span class="yes">All soluble</span></td></tr>
+      <tr><td>Nitrates</td><td><span class="yes">All soluble</span></td></tr>
+      <tr><td>Chlorides and iodides</td><td><span class="yes">Soluble</span>, except <span class="no">silver</span> and <span class="no">lead(II)</span></td></tr>
+      <tr><td>Sulfates</td><td><span class="yes">Soluble</span>, except <span class="no">barium</span>, <span class="no">calcium</span> and <span class="no">lead(II)</span></td></tr>
+      <tr><td>Carbonates</td><td><span class="no">Insoluble</span>, except sodium, potassium and ammonium</td></tr>
+      <tr><td>Hydroxides and oxides</td><td><span class="no">Insoluble</span>, except sodium, potassium and ammonium (calcium hydroxide is slightly soluble)</td></tr>
+    </table>
+    <p class="note">Also: dilute acids and alkalis are (aq). Water is (l). Metals are (s). H<span class="sub">2</span> and CO<span class="sub">2</span> are (g).</p>
+    <button class="btn teal" type="button" id="modal-close">Got it</button>
+  </div>
+</div>
+
+<footer>Made for <a href="https://www.instagram.com/scienceiskhool/" target="_blank" rel="noopener">@scienceiskhool</a></footer>
+<canvas id="confetti" hidden></canvas>
+
+<script>
+(function () {
+"use strict";
+
+/* =================== SETTINGS (safe to edit) =================== */
+var SUBMIT_URL = "https://script.google.com/macros/s/AKfycbxCTjRCQzLlWXmmY-5R0p75WCmeFLzC9ZM3gNbGRXpcc_d9qHMXdyCn12B4dHpnrBWe/exec";
+var SHEET_TAB = "Ionic Equations";    // tab name in your Google Sheet
+var TRAIN_ROUNDS = 5;                 // equations per training game
+var BOSS_NAME = "SPECTRON";
+var BOSS_HP = 100;
+var HIT = 15, CRIT = 25, CRIT_SECS = 12;  // damage per correct answer; crit if answered within CRIT_SECS
+var BOSS_SECS = { easy: 45, hard: 35 };   // seconds before the boss attacks
+var HEARTS = { easy: 4, hard: 3 };
+// Optional: paste image URLs (e.g. files in your GitHub repo) to replace the built-in pixel sprites
+var HERO_IMG = "";
+var BOSS_IMG = "";
+var CLASSES = [];
+["S1", "S2", "S3", "S4"].forEach(function (l) {
+  ["Charity", "Courage", "Faith", "Hope", "Humility", "Integrity", "Love", "Respect", "Joy"].forEach(function (v) { CLASSES.push(l + " " + v); });
+});
+CLASSES.push("S5 Faith", "Other");
+
+/*CHEM-START*/
+/* =================== CHEMISTRY =================== */
+function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+function fx(f) { return esc(f).replace(/([A-Za-z\)])(\d+)/g, '$1<span class="sub">$2</span>'); }
+function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); return b ? gcd(b, a % b) : a; }
+function part(s, n, poly) { return n === 1 ? s : (poly ? "(" + s + ")" + n : s + n); }
+
+var CATS = { H: ["H", 1], Na: ["Na", 1], K: ["K", 1], Ag: ["Ag", 1], Mg: ["Mg", 2], Ca: ["Ca", 2], Ba: ["Ba", 2], Zn: ["Zn", 2], Cu: ["Cu", 2], Pb: ["Pb", 2], Fe2: ["Fe", 2], Fe3: ["Fe", 3], Al: ["Al", 3] };
+var ANS = { Cl: [-1, 0], I: [-1, 0], NO3: [-1, 1], SO4: [-2, 1], CO3: [-2, 1], OH: [-1, 1], O: [-2, 0] };
+function soluble(ck, ak) { // O-level solubility rules
+  if (ck === "Na" || ck === "K" || ck === "H" || ak === "NO3") return true;
+  if (ak === "Cl" || ak === "I") return ck !== "Ag" && ck !== "Pb";
+  if (ak === "SO4") return ["Ba", "Pb", "Ca"].indexOf(ck) < 0;
+  return false;
+}
+var COMP = {};
+Object.keys(CATS).forEach(function (ck) {
+  Object.keys(ANS).forEach(function (ak) {
+    if (ck === "H" && (ak === "OH" || ak === "O" || ak === "CO3")) return;
+    var cs = CATS[ck][0], cc = CATS[ck][1], ac = ANS[ak][0];
+    var l = cc * -ac / gcd(cc, ac), n = l / cc, m = l / -ac;
+    var f = part(cs, n, false) + part(ak, m, ANS[ak][1]);
+    COMP[f] = { ck: ck, ak: ak, sol: soluble(ck, ak), ions: [{ f: cs, ch: cc, n: n }, { f: ak, ch: ac, n: m }] };
+  });
+});
+
+var TYPES = { P: "Precipitation", N: "Neutralisation", A: "Acid + metal / carbonate", D: "Displacement" };
+// [type, level, equation]   E = Combined Science, H = Pure Chemistry extras
+var RXN_SRC = [
+  ["P", "E", "AgNO3(aq) + NaCl(aq) -> AgCl(s) + NaNO3(aq)"],
+  ["P", "E", "2AgNO3(aq) + MgCl2(aq) -> 2AgCl(s) + Mg(NO3)2(aq)"],
+  ["P", "E", "BaCl2(aq) + Na2SO4(aq) -> BaSO4(s) + 2NaCl(aq)"],
+  ["P", "E", "Ba(NO3)2(aq) + K2SO4(aq) -> BaSO4(s) + 2KNO3(aq)"],
+  ["P", "E", "Pb(NO3)2(aq) + 2KI(aq) -> PbI2(s) + 2KNO3(aq)"],
+  ["P", "E", "CuSO4(aq) + 2NaOH(aq) -> Cu(OH)2(s) + Na2SO4(aq)"],
+  ["P", "E", "FeCl3(aq) + 3NaOH(aq) -> Fe(OH)3(s) + 3NaCl(aq)"],
+  ["P", "E", "CaCl2(aq) + Na2CO3(aq) -> CaCO3(s) + 2NaCl(aq)"],
+  ["P", "H", "FeSO4(aq) + 2KOH(aq) -> Fe(OH)2(s) + K2SO4(aq)"],
+  ["P", "H", "3AgNO3(aq) + AlCl3(aq) -> 3AgCl(s) + Al(NO3)3(aq)"],
+  ["P", "H", "2AgNO3(aq) + BaCl2(aq) -> 2AgCl(s) + Ba(NO3)2(aq)"],
+  ["P", "H", "Pb(NO3)2(aq) + Na2SO4(aq) -> PbSO4(s) + 2NaNO3(aq)"],
+  ["P", "H", "MgSO4(aq) + Na2CO3(aq) -> MgCO3(s) + Na2SO4(aq)"],
+  ["P", "H", "Pb(NO3)2(aq) + 2NaCl(aq) -> PbCl2(s) + 2NaNO3(aq)"],
+  ["N", "E", "HCl(aq) + NaOH(aq) -> NaCl(aq) + H2O(l)"],
+  ["N", "E", "HNO3(aq) + KOH(aq) -> KNO3(aq) + H2O(l)"],
+  ["N", "E", "HCl(aq) + KOH(aq) -> KCl(aq) + H2O(l)"],
+  ["N", "E", "H2SO4(aq) + 2NaOH(aq) -> Na2SO4(aq) + 2H2O(l)"],
+  ["N", "E", "H2SO4(aq) + 2KOH(aq) -> K2SO4(aq) + 2H2O(l)"],
+  ["N", "H", "2HCl(aq) + CuO(s) -> CuCl2(aq) + H2O(l)"],
+  ["N", "H", "2HNO3(aq) + Mg(OH)2(s) -> Mg(NO3)2(aq) + 2H2O(l)"],
+  ["N", "H", "H2SO4(aq) + ZnO(s) -> ZnSO4(aq) + H2O(l)"],
+  ["N", "H", "H2SO4(aq) + MgO(s) -> MgSO4(aq) + H2O(l)"],
+  ["N", "H", "2HCl(aq) + Cu(OH)2(s) -> CuCl2(aq) + 2H2O(l)"],
+  ["A", "E", "Mg(s) + 2HCl(aq) -> MgCl2(aq) + H2(g)"],
+  ["A", "E", "Zn(s) + H2SO4(aq) -> ZnSO4(aq) + H2(g)"],
+  ["A", "E", "Fe(s) + 2HCl(aq) -> FeCl2(aq) + H2(g)"],
+  ["A", "E", "Na2CO3(aq) + 2HCl(aq) -> 2NaCl(aq) + H2O(l) + CO2(g)"],
+  ["A", "E", "K2CO3(aq) + 2HNO3(aq) -> 2KNO3(aq) + H2O(l) + CO2(g)"],
+  ["A", "E", "Na2CO3(aq) + H2SO4(aq) -> Na2SO4(aq) + H2O(l) + CO2(g)"],
+  ["A", "H", "2Al(s) + 6HCl(aq) -> 2AlCl3(aq) + 3H2(g)"],
+  ["A", "H", "2Al(s) + 3H2SO4(aq) -> Al2(SO4)3(aq) + 3H2(g)"],
+  ["A", "H", "CaCO3(s) + 2HCl(aq) -> CaCl2(aq) + H2O(l) + CO2(g)"],
+  ["A", "H", "CuCO3(s) + H2SO4(aq) -> CuSO4(aq) + H2O(l) + CO2(g)"],
+  ["A", "H", "ZnCO3(s) + 2HNO3(aq) -> Zn(NO3)2(aq) + H2O(l) + CO2(g)"],
+  ["D", "E", "Zn(s) + CuSO4(aq) -> ZnSO4(aq) + Cu(s)"],
+  ["D", "E", "Mg(s) + CuSO4(aq) -> MgSO4(aq) + Cu(s)"],
+  ["D", "E", "Fe(s) + CuSO4(aq) -> FeSO4(aq) + Cu(s)"],
+  ["D", "E", "Cu(s) + 2AgNO3(aq) -> Cu(NO3)2(aq) + 2Ag(s)"],
+  ["D", "E", "Mg(s) + ZnCl2(aq) -> MgCl2(aq) + Zn(s)"],
+  ["D", "E", "Zn(s) + 2AgNO3(aq) -> Zn(NO3)2(aq) + 2Ag(s)"],
+  ["D", "H", "Zn(s) + Pb(NO3)2(aq) -> Zn(NO3)2(aq) + Pb(s)"],
+  ["D", "H", "Mg(s) + 2AgNO3(aq) -> Mg(NO3)2(aq) + 2Ag(s)"],
+  ["D", "H", "2Al(s) + 3CuSO4(aq) -> Al2(SO4)3(aq) + 3Cu(s)"],
+  ["D", "H", "2Al(s) + 3CuCl2(aq) -> 2AlCl3(aq) + 3Cu(s)"]
+];
+
+function parseSide(s) {
+  return s.split(" + ").map(function (x) {
+    var m = /^(\d*)(.+)\((s|l|g|aq)\)$/.exec(x.trim());
+    return { c: m[1] ? +m[1] : 1, f: m[2], s: m[3], comp: COMP[m[2]] || null };
+  });
+}
+function role(sp) {
+  if (!sp.comp) { if (sp.f === "H2O") return "water"; if (sp.f === "CO2" || sp.f === "H2") return "gas"; return "metal"; }
+  if (sp.comp.ck === "H") return "acid";
+  if (sp.comp.sol && sp.comp.ak === "OH") return "alkali";
+  return sp.comp.sol ? "salt" : "insol";
+}
+var ROLE_STATE = { water: "l", gas: "g", metal: "s", acid: "aq", alkali: "aq", salt: "aq", insol: "s" };
+function splittable(sp) { return !!(sp.comp && sp.s === "aq"); }
+function expand(sp) {
+  if (splittable(sp)) return sp.comp.ions.map(function (io) { return { c: sp.c * io.n, f: io.f, ch: io.ch, s: "aq" }; });
+  return [{ c: sp.c, f: sp.f, ch: null, s: sp.s }];
+}
+function tkey(t) { return t.f + "|" + t.ch + "|" + t.s; }
+function chStr(ch) { if (ch === null || ch === undefined) return ""; var a = Math.abs(ch); return (a === 1 ? "" : a) + (ch > 0 ? "+" : "−"); }
+function cloneT(t, o) { var n = { c: t.c, f: t.f, ch: t.ch, s: t.s }; if (o) for (var k in o) n[k] = o[k]; return n; }
+
+function analyse(r) {
+  var L = [], R = [];
+  r.L.forEach(function (sp) { L = L.concat(expand(sp)); });
+  r.R.forEach(function (sp) { R = R.concat(expand(sp)); });
+  var spect = L.filter(function (t) { return t.ch !== null && R.some(function (u) { return tkey(u) === tkey(t) && u.c === t.c; }); });
+  var isSp = function (t) { return t.ch !== null && spect.some(function (s) { return tkey(s) === tkey(t); }); };
+  var nL = L.filter(function (t) { return !isSp(t); }), nR = R.filter(function (t) { return !isSp(t); });
+  var g = 0; nL.concat(nR).forEach(function (t) { g = gcd(g, t.c); });
+  var red = function (a) { return a.map(function (t) { return cloneT(t, { c: t.c / g }); }); };
+  return { L: L, R: R, spect: spect, nL: nL, nR: nR, g: g, rL: red(nL), rR: red(nR) };
+}
+
+var RXNS = RXN_SRC.map(function (x, i) {
+  var s = x[2].split(" -> ");
+  var r = { id: i, type: x[0], lv: x[1], src: x[2], L: parseSide(s[0]), R: parseSide(s[1]) };
+  r.A = analyse(r);
+  return r;
+});
+
+/* --- display --- */
+function termHTML(t) {
+  return '<span class="tm">' + (t.c > 1 ? t.c : "") + fx(t.f) + (t.ch !== null && t.ch !== undefined ? "<sup>" + chStr(t.ch) + "</sup>" : "") + '<span class="st">(' + t.s + ")</span></span>";
+}
+function eqHTML(L, R) { return L.map(termHTML).join(" + ") + " → " + R.map(termHTML).join(" + "); }
+function spT(sp) { return { c: sp.c, f: sp.f, ch: null, s: sp.s }; }
+function fullHTML(r) { return eqHTML(r.L.map(spT), r.R.map(spT)); }
+function ionHTML(t) { return fx(t.f) + "<sup>" + chStr(t.ch) + "</sup>"; }
+function eqKey(L, R) {
+  var k = function (a) { return a.map(function (t) { return t.c + t.f + chStr(t.ch) + t.s; }).sort().join("+"); };
+  return k(L) + ">" + k(R);
+}
+function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function listNames(ts) { var n = ts.map(ionHTML); return n.length < 2 ? n.join("") : n.slice(0, -1).join(", ") + " and " + n[n.length - 1]; }
+
+/* --- wrong answers for boss MCQs --- */
+function distractors(r) {
+  var A = r.A, out = [];
+  out.push({ L: A.L, R: A.R, cat: "spectator" });
+  if (A.spect.length > 1) out.push({ L: A.nL.concat([A.spect[0]]), R: A.nR.concat([A.spect[0]]), cat: "spectator" });
+  if (A.g > 1) out.push({ L: A.nL, R: A.nR, cat: "simplify" });
+  // split an insoluble reactant into ions
+  var ins = r.L.filter(function (sp) { return sp.comp && sp.s === "s"; })[0];
+  if (ins) {
+    var L2 = [];
+    A.rL.forEach(function (t) {
+      if (t.f === ins.f && t.ch === null) ins.comp.ions.forEach(function (io) { L2.push({ c: t.c * io.n, f: io.f, ch: io.ch, s: "aq" }); });
+      else L2.push(t);
+    });
+    out.push({ L: L2, R: A.rR, cat: "splitsolid", info: ins });
+  }
+  // wrong state symbol on a solid or gas
+  var wrongS = function (arr, side) {
+    for (var i = 0; i < arr.length; i++) {
+      var t = arr[i];
+      if (t.ch === null && (t.s === "s" || t.s === "g")) {
+        var c = arr.map(function (u, j) { return j === i ? cloneT(u, { s: "aq" }) : u; });
+        out.push(side === "R" ? { L: A.rL, R: c, cat: "state", info: t } : { L: c, R: A.rR, cat: "state", info: t });
+        return true;
+      }
+    }
+    return false;
+  };
+  if (!wrongS(A.rR, "R")) wrongS(A.rL, "L");
+  // unbalanced: drop a coefficient
+  var all = A.rL.concat(A.rR), big = all.filter(function (t) { return t.c > 1; })[0];
+  if (big) {
+    var un = function (a) { return a.map(function (t) { return t === big ? cloneT(t, { c: 1 }) : t; }); };
+    out.push({ L: un(A.rL), R: un(A.rR), cat: "unbalanced" });
+  }
+  // kept the spectators, removed the reacting ions
+  var salt = r.R.filter(function (sp) { return splittable(sp); })[0];
+  if (salt) out.push({ L: expand({ c: 1, f: salt.f, s: "aq", comp: salt.comp }), R: [{ c: 1, f: salt.f, ch: null, s: "aq" }], cat: "reacting" });
+  out.push({ L: r.L.map(spT), R: r.R.map(spT), cat: "molecular" });
+  // de-duplicate
+  var seen = {}; seen[eqKey(A.rL, A.rR)] = 1;
+  return out.filter(function (d) { var k = eqKey(d.L, d.R); if (seen[k]) return false; seen[k] = 1; return true; });
+}
+function makeIonicQ(r) {
+  var ds = distractors(r), pick = [], used = {};
+  shuffle(ds).forEach(function (d) { if (pick.length < 3 && !used[d.cat]) { pick.push(d); used[d.cat] = 1; } });
+  shuffle(ds).forEach(function (d) { if (pick.length < 3 && pick.indexOf(d) < 0) pick.push(d); });
+  var opts = pick.map(function (d) { return { html: eqHTML(d.L, d.R), ok: false, cat: d.cat, info: d.info }; });
+  opts.push({ html: eqHTML(r.A.rL, r.A.rR), ok: true });
+  return { kind: "ionic", r: r, opts: shuffle(opts) };
+}
+function makeSpecQ(r) {
+  var A = r.A, sp = A.spect, seen = {};
+  var react = [];
+  A.nL.concat(A.nR).forEach(function (t) { if (t.ch !== null && !seen[tkey(t)]) { seen[tkey(t)] = 1; react.push(t); } });
+  var cands = [];
+  var add = function (ts, cat) { if (!ts.length) return; cands.push({ html: listNames(ts) + " only", key: ts.map(tkey).sort().join(), ok: false, cat: cat }); };
+  if (react.length) add(react, "specid");
+  if (react.length) add([sp[0], react[0]], "specid");
+  if (sp.length > 1) add([sp[1]], "specid");
+  if (react.length > 1) add([react[0]], "specid");
+  if (react.length) add(sp.concat(react), "specid");
+  var correctKey = sp.map(tkey).sort().join();
+  var uniq = {}; uniq[correctKey] = 1;
+  cands = shuffle(cands).filter(function (c) { if (uniq[c.key]) return false; uniq[c.key] = 1; return true; });
+  var opts = cands.slice(0, 2);
+  opts.push({ html: "None. Every ion takes part.", ok: false, cat: "specid" });
+  opts.push({ html: listNames(sp) + " only", ok: true });
+  return { kind: "spec", r: r, opts: shuffle(opts) };
+}
+/*CHEM-END*/
+
+/* =================== HELPERS =================== */
+var $ = function (id) { return document.getElementById(id); };
+function store(k, v) { try { localStorage.setItem("ionicquest_" + k, JSON.stringify(v)); } catch (e) {} }
+function load(k, d) { try { var v = localStorage.getItem("ionicquest_" + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }
+function show(id) { ["scr-start", "scr-train", "scr-boss", "scr-bend", "scr-result"].forEach(function (s) { $(s).hidden = s !== id; }); document.body.classList.toggle("dark", id === "scr-boss" || id === "scr-bend"); $("btn-quit").hidden = id === "scr-start"; window.scrollTo(0, 0); }
+function fmtTime(s) { s = Math.round(s); return Math.floor(s / 60) + ":" + ("0" + s % 60).slice(-2); }
+function stripTags(h) { var d = document.createElement("div"); d.innerHTML = h; return d.textContent.replace(/\s+/g, " ").trim(); }
+
+var ERR = {
+  st_metal: { label: "State symbols: metals", tip: "Metals are solids at room temperature, e.g. Zn(s), Cu(s)." },
+  st_insol: { label: "State symbols: insoluble solids", tip: "Precipitates and insoluble reactants are (s). Check the solubility table." },
+  st_salt: { label: "State symbols: soluble salts", tip: "A soluble salt in solution is (aq)." },
+  st_acidalk: { label: "State symbols: acids and alkalis", tip: "Dilute acids and alkalis are dissolved in water, so (aq)." },
+  st_water: { label: "State symbols: water", tip: "Water is a liquid: H₂O(l)." },
+  st_gas: { label: "State symbols: gases", tip: "Hydrogen and carbon dioxide are given off as gases: (g)." },
+  split_solid: { label: "Splitting things that stay whole", tip: "Only (aq) ionic compounds split. Solids, water, gases and metals stay as written." },
+  split_missed: { label: "Missing a compound to split", tip: "Every (aq) ionic compound splits, including acids and alkalis." },
+  cancel_wrong: { label: "Cancelling ions that react", tip: "Cancel only ions that appear unchanged, with the same number, on both sides." },
+  cancel_missed: { label: "Missing a spectator ion", tip: "Scan both sides for any ion that appears on each: that's a spectator." },
+  simplify: { label: "Simplifying coefficients", tip: "If every coefficient shares a factor, divide them all by it." },
+  b_spectator: { label: "Leaving spectator ions in", tip: "An ionic equation never shows ions that appear unchanged on both sides." },
+  b_simplify: { label: "Not simplifying", tip: "Check whether all coefficients can be divided by the same number." },
+  b_splitsolid: { label: "Splitting an insoluble solid", tip: "Insoluble reactants like CaCO₃, CuO and Mg(OH)₂ keep their formula." },
+  b_state: { label: "Wrong state symbols", tip: "Precipitates and metals are (s); H₂ and CO₂ are (g)." },
+  b_unbalanced: { label: "Unbalanced ionic equations", tip: "Atoms and total charge must balance on both sides." },
+  b_reacting: { label: "Keeping spectators instead of reacting ions", tip: "The ionic equation shows the ions that change, not the ones that stay." },
+  b_molecular: { label: "Not writing ions at all", tip: "Split (aq) ionic compounds into ions, then cancel the spectators." },
+  b_specid: { label: "Spotting spectator ions", tip: "Spectator ions appear on both sides of the split equation, unchanged." },
+  b_timeout: { label: "Running out of time", tip: "Strategy: split the (aq) compounds in your head, cancel, then match." }
+};
+var ROLE_ERR = { metal: "st_metal", insol: "st_insol", salt: "st_salt", acid: "st_acidalk", alkali: "st_acidalk", water: "st_water", gas: "st_gas" };
+var STATE_NAMES = { s: "solid", l: "liquid", g: "gas", aq: "aqueous" };
+
+/* =================== PIXEL SPRITES =================== */
+var HERO_MAP = [
+  "......kkkkk.....",
+  ".....kHHHHHk....",
+  "....kHHHHHHHk...",
+  "....kHSSSSSHk...",
+  "...kkkkSSkkkk...",
+  "...kGGkSSkGGk...",
+  "....kkSSSSkk....",
+  ".....kSmmSk.....",
+  "....kWWkkWWk....",
+  "...kWWWtWWWWk.kk",
+  "..kWWkWtWWkWWkFk",
+  "..kSkWWtWWWkSkFk",
+  "...kkWWtWWWWkkkk",
+  "....kWWWWWWk....",
+  "....kBBkkBBk....",
+  "....kkk..kkk...."
+];
+var HERO_PAL = { k: "#1F2A2E", H: "#3B2A20", S: "#F4C9A8", G: "#2EF2E0", m: "#C0504D", W: "#FFFFFF", t: "#069494", F: "#FF8243", B: "#3A4FA0" };
+var MON_MAP = [
+  "......y...y...y......",
+  ".....yyy.yyy.yyy.....",
+  ".....yyyyyyyyyyy.....",
+  ".....yRyyyRyyyRy.....",
+  "....kkkkkkkkkkkkk....",
+  "..kkPPPPPPPPPPPPPkk..",
+  ".kPPPPPPPPPPPPPPPPPk.",
+  "kPPPwwwwPPPPPwwwwPPPk",
+  "kPPwwkkwwPPPwwkkwwPPk",
+  "kPPwwkkwwPPPwwkkwwPPk",
+  "kPPPwwwwPPPPPwwwwPPPk",
+  "kPPPPPPPPPPPPPPPPPPPk",
+  "kPPPPkkkkkkkkkkkPPPPk",
+  "kPPPPkWkWkWkWkWkPPPPk",
+  "kPPPPPkkkkkkkkkPPPPPk",
+  "kPPDPPPPPPPPPPPPPDPPk",
+  ".kPPDDPPPPPPPPPDDPPk.",
+  "..kPPPPPPPPPPPPPPPk..",
+  "...kkPPkkkkkkkPPkk...",
+  ".....kkk.....kkk....."
+];
+var MON_PAL = { k: "#0D0B1A", y: "#FCE883", R: "#FF4D5E", P: "#FF7FB0", D: "#C2477A", w: "#FFFFFF" };
+var BOLT_MAP = ["..kkk..", ".kyyyk.", "kyFFFyk", "kyFwFyk", "kyFFFyk", ".kyyyk.", "..kkk.."];
+var BOLT_PAL = { k: "#0D0B1A", y: "#FCE883", F: "#FF8243", w: "#FFFFFF" };
+var HEART_MAP = [".kk.kk.", "kRRkRRk", "kRwRRRk", "kRRRRRk", ".kRRRk.", "..kRk..", "...k..."];
+var HEART_PAL = { k: "#0D0B1A", R: "#FF4D5E", w: "#FFFFFF" };
+function pixelSVG(map, pal) {
+  var w = 0, r = "";
+  map.forEach(function (row, y) { w = Math.max(w, row.length); for (var x = 0; x < row.length; x++) { var c = pal[row[x]]; if (c) r += '<rect x="' + x + '" y="' + y + '" width="1.02" height="1.02" fill="' + c + '"/>'; } });
+  return '<svg viewBox="0 0 ' + w + " " + map.length + '" shape-rendering="crispEdges" aria-hidden="true">' + r + "</svg>";
+}
+function heroArt() { return HERO_IMG ? '<img src="' + esc(HERO_IMG) + '" alt="">' : pixelSVG(HERO_MAP, HERO_PAL); }
+function monArt() { return BOSS_IMG ? '<img src="' + esc(BOSS_IMG) + '" alt="">' : pixelSVG(MON_MAP, MON_PAL); }
+$("b-hero").innerHTML = heroArt();
+$("b-mon").innerHTML = monArt() + '<span class="orbit" style="left:-14px;top:30%">+</span><span class="orbit" style="right:-10px;top:10%;animation-delay:.5s">−</span><span class="orbit" style="right:6%;bottom:-6px;animation-delay:1s">2+</span>';
+$("b-bolt").innerHTML = pixelSVG(BOLT_MAP, BOLT_PAL);
+$("b-name").textContent = BOSS_NAME;
+
+/* =================== SOUND =================== */
+var Sound = {
+  on: load("sound", true), ctx: null,
+  tone: function (f, type, dur, vol, delay) {
+    if (!this.on) return;
+    try {
+      this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)();
+      var c = this.ctx, t = c.currentTime + (delay || 0), o = c.createOscillator(), g = c.createGain();
+      o.type = type; o.frequency.setValueAtTime(f, t);
+      g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + dur + .02);
+    } catch (e) {}
+  },
+  tap: function () { this.tone(660, "square", .05, .04); },
+  ok: function () { this.tone(660, "square", .09, .06); this.tone(990, "square", .14, .06, .08); },
+  bad: function () { this.tone(180, "square", .2, .07); },
+  split: function () { this.tone(520, "triangle", .08, .1); this.tone(780, "triangle", .1, .1, .06); },
+  cancel: function () { this.tone(880, "square", .06, .05); this.tone(440, "square", .1, .05, .05); },
+  hit: function () { [880, 660, 990].forEach(function (n, i) { Sound.tone(n, "square", .07, .07, i * .05); }); },
+  hurt: function () { this.tone(140, "sawtooth", .3, .08); this.tone(90, "square", .3, .06, .1); },
+  win: function () { [523, 659, 784, 1047, 784, 1047].forEach(function (n, i) { Sound.tone(n, "square", .14, .06, i * .12); }); },
+  lose: function () { [392, 330, 262, 196].forEach(function (n, i) { Sound.tone(n, "square", .22, .06, i * .2); }); }
+};
+function paintSound() { $("btn-sound").setAttribute("aria-label", Sound.on ? "Sound on" : "Sound off"); $("btn-sound").style.opacity = Sound.on ? 1 : .45; }
+$("btn-sound").addEventListener("click", function () { Sound.on = !Sound.on; store("sound", Sound.on); paintSound(); });
+paintSound();
+
+/* =================== START SCREEN =================== */
+var G = { lv: load("lv", "easy"), types: load("types", ["P", "N", "A", "D"]) };
+(function setup() {
+  var sel = $("in-cls");
+  CLASSES.forEach(function (c) { var o = document.createElement("option"); o.textContent = c; sel.appendChild(o); });
+  var st = load("student", null);
+  if (st) { $("in-name").value = st.name || ""; sel.value = st.cls || ""; $("in-reg").value = st.reg || ""; }
+  var box = $("types");
+  Object.keys(TYPES).forEach(function (k) {
+    var b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.id = "type-" + k; b.dataset.t = k; b.textContent = TYPES[k];
+    box.appendChild(b);
+  });
+  box.addEventListener("click", function (e) {
+    var b = e.target.closest(".chip"); if (!b) return;
+    var k = b.dataset.t, i = G.types.indexOf(k);
+    if (i > -1) { if (G.types.length > 1) G.types.splice(i, 1); } else G.types.push(k);
+    store("types", G.types); paintStart();
+  });
+  ["lv-easy", "lv-hard"].forEach(function (id) { $(id).addEventListener("click", function () { G.lv = this.dataset.lv; store("lv", G.lv); paintStart(); }); });
+  paintStart();
+})();
+function paintStart() {
+  $("lv-easy").setAttribute("aria-pressed", G.lv === "easy");
+  $("lv-hard").setAttribute("aria-pressed", G.lv === "hard");
+  Object.keys(TYPES).forEach(function (k) { $("type-" + k).setAttribute("aria-pressed", G.types.indexOf(k) > -1); });
+  var b = load("best", {});
+  var bt = b["train_" + G.lv], bb = b["boss_" + G.lv];
+  $("txt-best").textContent = (bt != null ? "Training " + bt + "%" : "Training –") + " · " + (bb != null ? "Boss " + bb : "Boss –");
+}
+function readStudent() {
+  var name = $("in-name").value.trim(), cls = $("in-cls").value, reg = $("in-reg").value.trim();
+  if (!name) return err("Type your name."), null;
+  if (!cls) return err("Choose your class."), null;
+  if (!/^\d{1,2}$/.test(reg)) return err("Type your register number (1–2 digits)."), null;
+  err("");
+  var s = { name: name, cls: cls, reg: reg }; store("student", s); return s;
+  function err(m) { $("form-err").textContent = m; }
+}
+$("btn-train").addEventListener("click", function () { var s = readStudent(); if (s) { Sound.tone(1, "sine", .01, .0001); startTraining(s); } });
+$("btn-boss").addEventListener("click", function () { var s = readStudent(); if (s) { Sound.tone(1, "sine", .01, .0001); startBoss(s); } });
+$("btn-quit").addEventListener("click", function () { stopBossTimer(); Confetti.stop(); show("scr-start"); paintStart(); });
+$("form-start").addEventListener("submit", function (e) { e.preventDefault(); });
+
+function poolFor(n) {
+  // spread reactions across the chosen types; Pure Chem leans on the trickier cases
+  var byType = {};
+  G.types.forEach(function (t) {
+    var all = RXNS.filter(function (r) { return r.type === t && (G.lv === "hard" || r.lv === "E"); });
+    if (G.lv === "hard") { var h = shuffle(all.filter(function (r) { return r.lv === "H"; })), e = shuffle(all.filter(function (r) { return r.lv === "E"; })); all = []; while (h.length || e.length) { if (h.length) all.push(h.shift()); if (h.length && Math.random() < .5) all.push(h.shift()); if (e.length) all.push(e.shift()); } }
+    else all = shuffle(all);
+    byType[t] = all;
+  });
+  var order = shuffle(G.types), out = [], i = 0, guard = 0;
+  while (out.length < n && guard++ < 500) {
+    var t = order[i++ % order.length], list = byType[t];
+    if (!list.length) { list = byType[t] = shuffle(RXNS.filter(function (r) { return r.type === t && (G.lv === "hard" || r.lv === "E"); })); }
+    out.push(list.shift());
+  }
+  return out;
+}
+function newSession(student, mode) {
+  G.student = student; G.mode = mode; G.points = 0; G.err = {}; G.t0 = Date.now(); G.hints = 0; G.log = [];
+}
+function addErr(k) { G.err[k] = (G.err[k] || 0) + 1; }
+
+/* =================== TRAINING =================== */
+var T = null, uid = 0;
+var STEP_NAMES = ["States", "Split", "Cancel", "Simplify"];
+var STEP_INSTR = [
+  "Tap a substance, then choose its state symbol. Fill in all of them, then check.",
+  "Tap every aqueous ionic compound to split it into ions. Solids, liquids, gases and metals stay as they are.",
+  "Tap an ion, then tap the identical ion on the other side to cancel the pair. Cancel every spectator ion.",
+  "This is what's left. Can every coefficient be divided by the same number?"
+];
+function startTraining(student) {
+  newSession(student, "train");
+  T = { rounds: poolFor(TRAIN_ROUNDS), i: 0, res: [] };
+  show("scr-train"); $("t-points").textContent = "0";
+  startRound();
+}
+function startRound() {
+  var r = T.rounds[T.i];
+  T.r = r; T.step = 1; T.sel = null; T.done = false; T.clean = [true, true, true, true]; T.errs = []; T.tries = {};
+  T.units = [];
+  r.L.forEach(function (sp) { T.units.push(unitFrom(sp, "L")); });
+  r.R.forEach(function (sp) { T.units.push(unitFrom(sp, "R")); });
+  T.sel = T.units[0].id;
+  hideFb(); renderTrain();
+}
+function unitFrom(sp, side) { return { id: ++uid, side: side, kind: "sp", sp: sp, c: sp.c, f: sp.f, ch: null, s: sp.s, pick: null }; }
+function unitById(id) { for (var i = 0; i < T.units.length; i++) if (T.units[i].id === id) return T.units[i]; return null; }
+function mistake(step, errKey, label) {
+  T.clean[step - 1] = false;
+  if (errKey) { addErr(errKey); if (T.errs.indexOf(label || ERR[errKey].label) < 0) T.errs.push(label || ERR[errKey].label); }
+}
+function renderTrain() {
+  var r = T.r;
+  $("t-round").innerHTML = "EQUATION " + (T.i + 1) + "/" + T.rounds.length + "<span>" + esc(TYPES[r.type]) + "</span>";
+  $("t-steps").innerHTML = STEP_NAMES.map(function (n, i) {
+    var s = i + 1, cls = s === T.step ? "now" : s < T.step ? "done" + (T.clean[i] ? "" : " miss") : "";
+    return '<div class="stp ' + cls + '"><i>' + (s < T.step ? (T.clean[i] ? "✓" : "~") : s) + "</i>" + n + "</div>";
+  }).join("");
+  $("t-instr").innerHTML = '<b class="n">' + T.step + "</b><span>" + STEP_INSTR[T.step - 1] + "</span>";
+  renderEq(); renderTools();
+}
+function unitInner(u) {
+  var h = (u.c > 1 ? '<b class="co">' + u.c + "</b>" : "") + "<span>" + fx(u.f) + (u.ch !== null ? "<sup>" + chStr(u.ch) + "</sup>" : "") + "</span>";
+  if (T.step === 1) h += u.pick ? '<span class="st set">(' + u.pick + ")</span>" : '<span class="st q">?</span>';
+  else h += '<span class="st">(' + u.s + ")</span>";
+  return h;
+}
+function renderEq() {
+  var side = function (s) {
+    var us = T.units.filter(function (u) { return u.side === s && (T.step < 4 || !u.gone); });
+    var items = us.map(function (u) {
+      var cls = ["term"];
+      if (u.kind === "ion") cls.push("ion");
+      if (T.sel === u.id) cls.push("sel");
+      if (u.bad) cls.push("bad");
+      if (u.flag) cls.push("flag");
+      if (u.fresh) cls.push("pop");
+      if (u.gone) cls.push("gone");
+      if (T.step === 4) cls.push("static");
+      var dis = T.step === 4 || u.gone ? " disabled" : "";
+      return '<button type="button" class="' + cls.join(" ") + '" data-id="' + u.id + '"' + dis + ' aria-label="' + esc(stripTagsSafe(u)) + '">' + unitInner(u) + "</button>";
+    });
+    return '<div class="side ' + (s === "L" ? "l" : "r") + '"><small>' + (s === "L" ? "Reactants" : "Products") + '</small><div class="terms">' + items.join('<span class="plus">+</span>') + "</div></div>";
+  };
+  $("t-eq").innerHTML = side("L") + '<div class="arrow" aria-hidden="true">→</div>' + side("R");
+  T.units.forEach(function (u) { u.fresh = false; u.bad = false; });
+}
+function stripTagsSafe(u) { return (u.c > 1 ? u.c + " " : "") + u.f + (u.ch !== null ? " " + chStr(u.ch) : "") + (T.step === 1 ? (u.pick ? " " + u.pick : " state not set") : " " + u.s); }
+
+function renderTools() {
+  var t = $("t-tools"), h = "";
+  if (T.done) { t.innerHTML = ""; return; }
+  if (T.step === 1) {
+    h = '<div class="states">' + ["s", "l", "g", "aq"].map(function (s) { return '<button type="button" class="btn" data-state="' + s + '">(' + s + ")<small>" + STATE_NAMES[s] + "</small></button>"; }).join("") + "</div>" +
+      '<div class="tool-row"><button type="button" class="btn alt" data-act="hint">Solubility table</button><button type="button" class="btn teal" data-act="check1">Check states</button></div>';
+  } else if (T.step === 2) {
+    h = '<div class="tool-row"><button type="button" class="btn alt" data-act="hint">Solubility table</button><button type="button" class="btn teal" data-act="check2">Done splitting</button></div>';
+  } else if (T.step === 3) {
+    h = '<div class="tool-row"><button type="button" class="btn teal" data-act="check3">Done cancelling</button></div>';
+  } else {
+    h = '<div class="simp">' +
+      '<button type="button" class="btn" data-g="1">It is already in the simplest ratio</button>' +
+      '<button type="button" class="btn" data-g="2">Divide every coefficient by 2</button>' +
+      '<button type="button" class="btn" data-g="3">Divide every coefficient by 3</button></div>';
+  }
+  t.innerHTML = h;
+  if (T.tries.simp) T.tries.simp.forEach(function (g) { var b = t.querySelector('[data-g="' + g + '"]'); if (b) { b.classList.add("wrong"); b.disabled = true; } });
+}
+function fb(kind, html, next) {
+  var b = $("t-fb"); b.hidden = false; b.className = "tfb " + kind;
+  b.innerHTML = html + (next ? '<button type="button" class="btn teal" id="btn-tnext">' + next + "</button>" : "");
+  if (next) { $("btn-tnext").addEventListener("click", nextStep); if (window.matchMedia("(max-width: 759px)").matches) b.scrollIntoView({ behavior: "smooth", block: "nearest" }); }
+}
+function hideFb() { $("t-fb").hidden = true; }
+function stepDone(msg) {
+  T.done = true; T.sel = null;
+  if (T.clean[T.step - 1]) G.points += 100;
+  $("t-points").textContent = G.points;
+  Sound.ok();
+  var last = T.step === 4, nextLbl = !last ? "Next: " + STEP_NAMES[T.step] + " →" : (T.i + 1 < T.rounds.length ? "Next equation →" : "See results →");
+  renderTrain();
+  fb("ok", msg, nextLbl);
+}
+function nextStep() {
+  hideFb();
+  if (T.step < 4) { T.step++; T.done = false; T.sel = null; renderTrain(); return; }
+  T.res.push({ r: T.r, clean: T.clean.slice(), errs: T.errs.slice() });
+  G.log.push({ ok: T.clean.every(Boolean), r: T.r, errs: T.errs.slice(), clean: T.clean.slice() });
+  T.i++;
+  if (T.i < T.rounds.length) startRound(); else finish();
+}
+
+$("t-eq").addEventListener("click", function (e) {
+  var b = e.target.closest(".term"); if (!b || T.done) return;
+  var u = unitById(+b.dataset.id); if (!u) return;
+  if (T.step === 1) { T.sel = u.id; Sound.tap(); renderEq(); }
+  else if (T.step === 2) tapSplit(u);
+  else if (T.step === 3) tapCancel(u);
+});
+$("t-tools").addEventListener("click", function (e) {
+  var b = e.target.closest("button"); if (!b || T.done) return;
+  if (b.dataset.state) return setState(b.dataset.state);
+  var a = b.dataset.act;
+  if (a === "hint") { G.hints++; $("modal").hidden = false; $("modal-close").focus(); return; }
+  if (a === "check1") return check1();
+  if (a === "check2") return check2();
+  if (a === "check3") return check3();
+  if (b.dataset.g) return checkSimp(+b.dataset.g);
+});
+$("modal-close").addEventListener("click", function () { $("modal").hidden = true; });
+$("modal").addEventListener("click", function (e) { if (e.target === this) this.hidden = true; });
+document.addEventListener("keydown", function (e) { if (e.key === "Escape") $("modal").hidden = true; });
+
+/* step 1 */
+function setState(s) {
+  var u = unitById(T.sel);
+  if (!u) { fb("info", "<p>Tap a substance in the equation first.</p>"); return; }
+  u.pick = s; Sound.tap();
+  var nxt = T.units.filter(function (x) { return !x.pick; })[0];
+  if (nxt) T.sel = nxt.id;
+  renderEq();
+  if (!$("t-fb").hidden && $("t-fb").classList.contains("info")) hideFb();
+}
+function check1() {
+  var empty = T.units.filter(function (u) { return !u.pick; });
+  if (empty.length) { empty.forEach(function (u) { u.flag = true; }); renderEq(); empty.forEach(function (u) { u.flag = false; }); fb("info", "<p>Give every substance a state symbol first. The dashed ones are still empty.</p>"); return; }
+  var wrong = T.units.filter(function (u) { return u.pick !== u.s; });
+  if (!wrong.length) { stepDone("<h3>States all correct!</h3><p>Now you can see which compounds are dissolved as ions.</p>"); return; }
+  var tips = [];
+  wrong.forEach(function (u) {
+    var ro = role(u.sp), k = ROLE_ERR[ro];
+    if (!u.erred) { mistake(1, k, ERR[k].label); u.erred = true; }
+    u.bad = true;
+    var why = { metal: "is a metal, so it's a solid", insol: "is insoluble (check the table), so it's a solid", salt: "is a soluble salt, so it's dissolved", acid: "is a dilute acid, so it's dissolved", alkali: "is an alkali, so it's dissolved", water: "is water, a liquid", gas: "is a gas" }[ro];
+    tips.push("<li>" + fx(u.f) + " " + why + ".</li>");
+  });
+  Sound.bad();
+  T.sel = wrong[0].id;
+  renderEq();
+  fb("no", "<h3>" + wrong.length + " state symbol" + (wrong.length > 1 ? "s" : "") + " to fix</h3><p>Change the shaking ones. Hint:</p><ul>" + tips.slice(0, 3).join("") + "</ul>");
+}
+/* step 2 */
+function tapSplit(u) {
+  if (u.kind === "ion") { fb("info", "<p>" + ionHTML(u) + "(aq) is already an ion.</p>"); return; }
+  if (splittable(u.sp)) {
+    var ions = expand(u.sp).map(function (t) { return { id: ++uid, side: u.side, kind: "ion", c: t.c, f: t.f, ch: t.ch, s: "aq", fresh: true, from: u.f }; });
+    var i = T.units.indexOf(u);
+    T.units.splice.apply(T.units, [i, 1].concat(ions));
+    Sound.split(); renderEq();
+    if (!$("t-fb").hidden && !$("t-fb").classList.contains("ok")) hideFb();
+    return;
+  }
+  var ro = role(u.sp);
+  var why = { metal: fx(u.f) + "(s) is a metal. It is not dissolved, so it stays as " + fx(u.f) + ".", insol: fx(u.f) + "(s) is an insoluble solid. Its ions are locked in the solid, so keep the formula.", water: "H<span class=\"sub\">2</span>O(l) is a covalent liquid. It stays as H<span class=\"sub\">2</span>O.", gas: fx(u.f) + "(g) is a covalent gas. It stays as written." }[ro];
+  if (!u.erred2) { mistake(2, "split_solid"); u.erred2 = true; }
+  u.bad = true; Sound.bad(); renderEq();
+  fb("no", "<p>" + why + "</p>");
+}
+function check2() {
+  var left = T.units.filter(function (u) { return u.kind === "sp" && splittable(u.sp); });
+  if (left.length) {
+    mistake(2, "split_missed"); Sound.bad();
+    left.forEach(function (u) { u.flag = true; }); renderEq(); left.forEach(function (u) { u.flag = false; });
+    fb("no", "<p>Not yet. " + left.length + " aqueous ionic compound" + (left.length > 1 ? "s are" : " is") + " still whole (dashed outline). Acids and alkalis count too.</p>");
+    return;
+  }
+  stepDone("<h3>Everything that dissolves is split!</h3><p>Look for ions that appear on both sides.</p>");
+}
+/* step 3 */
+function partnerOf(u) { return T.units.filter(function (x) { return x.side !== u.side && x.kind === "ion" && !x.gone && tkey(x) === tkey(u) && x.c === u.c; })[0]; }
+function tapCancel(u) {
+  if (u.gone) return;
+  if (u.kind !== "ion") {
+    if (!u.erred3) { mistake(3, "cancel_wrong"); u.erred3 = true; }
+    u.bad = true; Sound.bad(); T.sel = null; renderEq();
+    fb("no", "<p>" + fx(u.f) + "(" + u.s + ") is not a dissolved ion, so it can't cancel. It is part of the reaction.</p>");
+    return;
+  }
+  var a = unitById(T.sel);
+  if (!a || a.id === u.id) { T.sel = a && a.id === u.id ? null : u.id; Sound.tap(); renderEq(); return; }
+  if (a.side === u.side) { T.sel = u.id; Sound.tap(); renderEq(); return; }
+  if (tkey(a) === tkey(u) && a.c === u.c) {
+    a.gone = u.gone = true; T.sel = null; Sound.cancel(); renderEq();
+    fb("ok", "<p>" + (a.c > 1 ? a.c : "") + ionHTML(a) + "(aq) cancelled. It's a spectator ion: it's there before and after, unchanged.</p>");
+    return;
+  }
+  mistake(3, "cancel_wrong"); Sound.bad();
+  a.bad = u.bad = true; T.sel = null; renderEq();
+  var msg = !partnerOf(a) && !partnerOf(u) ? ionHTML(a) + " and " + ionHTML(u) + " each appear on only one side. They change in the reaction, so they stay." :
+    "These two are not identical, so they can't cancel. Match the same ion, with the same number, on both sides.";
+  fb("no", "<p>" + msg + "</p>");
+}
+function check3() {
+  var left = T.units.filter(function (u) { return u.side === "L" && u.kind === "ion" && !u.gone && partnerOf(u); });
+  if (left.length) {
+    mistake(3, "cancel_missed"); Sound.bad();
+    var flags = []; left.forEach(function (u) { flags.push(u, partnerOf(u)); });
+    flags.forEach(function (u) { u.flag = true; }); renderEq(); flags.forEach(function (u) { u.flag = false; });
+    fb("no", "<p>There " + (left.length > 1 ? "are " + left.length + " spectator ions" : "is a spectator ion") + " left. Look at the dashed pairs.</p>");
+    return;
+  }
+  stepDone("<h3>Spectators gone!</h3><p>Only the particles that change are left.</p>");
+}
+/* step 4 */
+function checkSimp(g) {
+  var A = T.r.A;
+  if (g !== A.g) {
+    mistake(4, "simplify"); Sound.bad();
+    T.tries.simp = (T.tries.simp || []).concat([g]); renderTools();
+    var cs = A.nL.concat(A.nR).map(function (t) { return t.c; }).join(", ");
+    fb("no", "<p>" + (A.g === 1 ? "The coefficients are " + cs + ". They don't all share a factor bigger than 1." : "The coefficients are " + cs + ". Can they all be divided by " + (g === 1 ? "something" : "a different number") + "?") + "</p>");
+    return;
+  }
+  T.done = true;
+  var finalH = eqHTML(A.rL, A.rR);
+  $("t-tools").innerHTML = '<div class="final"><small>Ionic equation</small><div>' + finalH + "</div></div>";
+  T.done = false; stepDone((A.g > 1 ? "<h3>Divided by " + A.g + ". Done!</h3>" : "<h3>Already simplest. Done!</h3>") + "<p>" + finalH + "</p>");
+  $("t-tools").innerHTML = '<div class="final"><small>Ionic equation</small><div>' + finalH + "</div></div>";
+}
+
+/* =================== BOSS FIGHT =================== */
+var B = null, raf = 0;
+function heartSVG() { return pixelSVG(HEART_MAP, HEART_PAL); }
+function startBoss(student) {
+  newSession(student, "boss");
+  B = { hp: BOSS_HP, hearts: HEARTS[G.lv], max: HEARTS[G.lv], n: 0, correct: 0, pool: poolFor(40), pi: 0, phase2: false, combo: 0, bestCombo: 0 };
+  show("scr-boss");
+  $("b-hero").className = "sprite hero-sp"; $("b-mon").className = "sprite mon-sp";
+  paintBossHud(); nextQ();
+}
+function paintBossHud(breakIdx) {
+  var h = "";
+  for (var i = 0; i < B.max; i++) h += '<span class="' + (i >= B.hearts ? "lost" : "") + (i === breakIdx ? " breaking" : "") + '">' + heartSVG() + "</span>";
+  $("b-hearts").innerHTML = h;
+  var p = Math.max(0, B.hp) / BOSS_HP * 100;
+  $("b-hp").style.width = p + "%";
+  $("b-hp").className = p <= 30 ? "low" : "";
+}
+function nextQ() {
+  if (B.hp <= 0 || B.hearts <= 0) return bossEnd();
+  $("b-fb").hidden = true; $("b-bolt").classList.remove("fly");
+  var r = B.pool[B.pi++ % B.pool.length];
+  var spec = Math.random() < (B.phase2 ? .4 : .25);
+  B.q = spec ? makeSpecQ(r) : makeIonicQ(r);
+  B.n++;
+  $("b-qtype").textContent = (B.phase2 ? "PHASE 2 · " : "") + "ATTACK " + B.n + " · " + TYPES[r.type].toUpperCase();
+  $("b-qtext").textContent = spec ? "Which are the spectator ions in this reaction?" : "Which is the correct ionic equation for this reaction?";
+  $("b-qeq").innerHTML = fullHTML(r);
+  $("b-opts").innerHTML = B.q.opts.map(function (o, i) { return '<button type="button" class="qopt" data-i="' + i + '"><span class="k">' + "ABCD"[i] + '</span><span class="tx">' + o.html + "</span></button>"; }).join("");
+  B.t0 = performance.now(); B.secs = BOSS_SECS[G.lv]; B.locked = false;
+  $("b-charge-lbl").textContent = BOSS_NAME + " IS CHARGING";
+  tick();
+}
+function tick() {
+  var el = (performance.now() - B.t0) / 1000, left = Math.max(0, B.secs - el);
+  $("b-cbar").style.width = Math.min(100, el / B.secs * 100) + "%";
+  $("b-secs").textContent = Math.ceil(left);
+  $("b-charge").classList.toggle("warn", left <= 8);
+  if (left <= 0) { answer(-1); return; }
+  raf = requestAnimationFrame(tick);
+}
+function stopBossTimer() { cancelAnimationFrame(raf); }
+$("b-opts").addEventListener("click", function (e) { var b = e.target.closest(".qopt"); if (b && !B.locked) answer(+b.dataset.i); });
+function floatText(txt, onBoss, hurt) {
+  var s = document.createElement("span"); s.className = "dmg" + (hurt ? " hurt" : ""); s.textContent = txt;
+  s.style[onBoss ? "right" : "left"] = onBoss ? "12%" : "8%"; s.style.top = "30%";
+  $("b-stage").appendChild(s); setTimeout(function () { s.remove(); }, 1100);
+}
+function retrigger(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+function answer(i) {
+  B.locked = true; stopBossTimer();
+  var q = B.q, el = (performance.now() - B.t0) / 1000, o = i >= 0 ? q.opts[i] : null, ok = !!(o && o.ok);
+  var btns = $("b-opts").querySelectorAll(".qopt");
+  q.opts.forEach(function (op, j) { btns[j].disabled = true; if (op.ok) btns[j].classList.add("right"); });
+  if (o && !ok) btns[i].classList.add("wrong");
+  var cat = ok ? null : (o ? o.cat : "timeout");
+  var r = q.r, A = r.A, msg;
+  if (ok) {
+    B.correct++; B.combo++; B.bestCombo = Math.max(B.bestCombo, B.combo);
+    var crit = el <= CRIT_SECS, dmg = crit ? CRIT : HIT;
+    B.hp = Math.max(0, B.hp - dmg);
+    G.points += (crit ? 150 : 100) + Math.round(Math.max(0, B.secs - el)) * 5;
+    retrigger($("b-hero"), "atk"); retrigger($("b-bolt"), "fly");
+    setTimeout(function () { retrigger($("b-mon"), "hit"); floatText((crit ? "CRIT! " : "") + "-" + dmg, true); Sound.hit(); paintBossHud(); }, 380);
+    msg = '<span class="ans">' + (crit ? "Critical hit!" : "Direct hit!") + "</span> " + (q.kind === "spec" ? "Spectators: " + listNames(A.spect) + "." : (A.spect.length ? "Spectators " + listNames(A.spect) + " cancelled" : "") + (A.g > 1 ? ", then ÷" + A.g + "." : "."));
+  } else {
+    B.combo = 0; B.hearts--;
+    retrigger($("b-mon"), "atk");
+    setTimeout(function () { retrigger($("b-hero"), "hit"); retrigger($("b-flash"), "on"); floatText("-1 ♥", false, true); Sound.hurt(); paintBossHud(B.hearts); }, 300);
+    addErr("b_" + cat);
+    msg = explain(q, cat, o) + '<br><span class="ans">Answer: ' + (q.kind === "spec" ? listNames(A.spect) : eqHTML(A.rL, A.rR)) + "</span>";
+  }
+  G.log.push({ ok: ok, r: r, kind: q.kind, cat: cat, secs: +el.toFixed(1), picked: o ? stripTags(o.html) : "(no answer)" });
+  if (!B.phase2 && B.hp > 0 && B.hp <= BOSS_HP / 2) {
+    B.phase2 = true;
+    setTimeout(function () { var p = document.createElement("div"); p.className = "phase"; p.textContent = BOSS_NAME + " IS ANGRY!"; $("b-stage").appendChild(p); setTimeout(function () { p.remove(); }, 2200); }, 700);
+  }
+  var over = B.hp <= 0 || B.hearts <= 0;
+  $("b-fb").hidden = false; $("b-fb").className = "qfb" + (ok ? "" : " no");
+  $("b-fb-msg").innerHTML = msg;
+  $("b-next").textContent = over ? (B.hp <= 0 ? "FINISH HIM ▶" : "CONTINUE ▶") : "NEXT ATTACK ▶";
+  if (window.matchMedia("(max-width: 759px)").matches) setTimeout(function () { $("b-fb").scrollIntoView({ behavior: "smooth", block: "nearest" }); }, 200);
+}
+function explain(q, cat, o) {
+  var A = q.r.A;
+  switch (cat) {
+    case "timeout": return BOSS_NAME + " struck first. You ran out of time.";
+    case "spectator": return "That one still has spectator ions in it: " + listNames(A.spect) + " appear unchanged on both sides, so they cancel.";
+    case "simplify": return "Close! Every coefficient can still be divided by " + A.g + ".";
+    case "splitsolid": return fx(o.info.f) + " is insoluble. It reacts as a solid, so it keeps its formula.";
+    case "state": return fx(o.info.f) + " should be (" + o.info.s + "), not (aq).";
+    case "unbalanced": return "Count the atoms and charges on each side. That equation doesn't balance.";
+    case "reacting": return "That shows the spectator ions joining up. The ionic equation shows the ions that actually change.";
+    case "molecular": return "That's the full chemical equation. Split the (aq) ionic compounds and cancel the spectators.";
+    case "specid": return "Spectator ions appear on both sides of the split equation, unchanged. Here that's " + listNames(A.spect) + ".";
+  }
+  return "Not quite.";
+}
+$("b-next").addEventListener("click", function () { if (B.hp <= 0 || B.hearts <= 0) bossEnd(); else nextQ(); });
+function bossEnd() {
+  stopBossTimer();
+  var win = B.hp <= 0;
+  B.win = win;
+  if (win) { $("b-mon").classList.add("dead"); }
+  setTimeout(function () {
+    show("scr-bend");
+    $("scr-bend").className = "bend" + (win ? "" : " lose");
+    $("be-title").textContent = win ? "VICTORY!" : "GAME OVER";
+    $("be-sprite").innerHTML = win ? heroArt() : monArt();
+    $("be-msg").textContent = win ? BOSS_NAME + " has been cancelled out, just like a spectator ion. " + B.correct + " hits in " + B.n + " attacks." : BOSS_NAME + " wins this round. You landed " + B.correct + " hits. Train up and try again!";
+    if (win) { Sound.win(); Confetti.go(); } else Sound.lose();
+  }, win ? 700 : 300);
+}
+$("be-go").addEventListener("click", function () { Confetti.stop(); finish(); });
+
+/* =================== RESULTS =================== */
+function finish() {
+  var secs = (Date.now() - G.t0) / 1000, S = { secs: secs };
+  show("scr-result");
+  var bars = [], typeStat = {};
+  Object.keys(TYPES).forEach(function (k) { typeStat[k] = [0, 0]; });
+  if (G.mode === "train") {
+    var steps = [0, 0, 0, 0];
+    T.res.forEach(function (x) { x.clean.forEach(function (c, i) { if (c) steps[i]++; }); typeStat[x.r.type][1] += 4; typeStat[x.r.type][0] += x.clean.filter(Boolean).length; });
+    S.correct = steps.reduce(function (a, b) { return a + b; }, 0); S.total = T.res.length * 4;
+    STEP_NAMES.forEach(function (n, i) { bars.push([(i + 1) + ". " + n, steps[i], T.res.length]); });
+    S.steps = steps;
+    $("res-bars-h").textContent = "Steps right first time";
+    $("res-l1").textContent = "Clean steps";
+  } else {
+    G.log.forEach(function (x) { typeStat[x.r.type][1]++; if (x.ok) typeStat[x.r.type][0]++; });
+    S.correct = B.correct; S.total = B.n;
+    Object.keys(TYPES).forEach(function (k) { if (typeStat[k][1]) bars.push([TYPES[k], typeStat[k][0], typeStat[k][1]]); });
+    var kinds = { ionic: [0, 0], spec: [0, 0] };
+    G.log.forEach(function (x) { kinds[x.kind][1]++; if (x.ok) kinds[x.kind][0]++; });
+    if (kinds.spec[1]) { bars.push(["Ionic equations", kinds.ionic[0], kinds.ionic[1]]); bars.push(["Spectator ions", kinds.spec[0], kinds.spec[1]]); }
+    $("res-bars-h").textContent = "Hits by reaction type";
+    $("res-l1").textContent = "Hits";
+  }
+  S.typeStat = typeStat;
+  var pct = S.total ? Math.round(S.correct / S.total * 100) : 0; S.pct = pct;
+  $("res-ring").style.setProperty("--p", pct); $("res-pct").textContent = pct + "%";
+  var title, sub;
+  if (G.mode === "train") {
+    title = pct >= 85 ? "Ion master!" : pct >= 60 ? "Solid training!" : "Keep training!";
+    sub = S.correct + " of " + S.total + " steps right first time across " + T.res.length + " equations. " + (pct >= 75 ? "You're ready for the boss." : "Try another round before the boss.");
+  } else {
+    title = B.win ? BOSS_NAME + " defeated!" : BOSS_NAME + " survived";
+    sub = B.correct + " hits from " + B.n + " attacks. Best combo " + B.bestCombo + ".";
+  }
+  $("res-title").textContent = title; $("res-sub").textContent = sub;
+  $("res-correct").textContent = S.correct + "/" + S.total;
+  $("res-acc").textContent = pct + "%";
+  $("res-time").textContent = fmtTime(secs);
+  $("res-points").textContent = G.points;
+  $("res-bars").innerHTML = bars.map(function (b) {
+    var p = b[2] ? Math.round(b[1] / b[2] * 100) : 0;
+    return '<div class="bar-row"><span>' + esc(b[0]) + '</span><div class="bar"><i class="' + (p < 60 ? "low" : "") + '" style="width:' + p + '%"></i></div><span class="n">' + b[1] + "/" + b[2] + "</span></div>";
+  }).join("");
+  var errs = Object.keys(G.err).sort(function (a, b) { return G.err[b] - G.err[a]; });
+  S.errs = errs;
+  $("res-weak").innerHTML = errs.length ? errs.slice(0, 3).map(function (k) { return "<li><b>" + esc(ERR[k].label) + " ×" + G.err[k] + "</b><span>" + esc(ERR[k].tip) + "</span></li>"; }).join("") :
+    '<li class="good"><b>No mistakes!</b><span>Every step was right first time.</span></li>';
+  var wrong = G.log.filter(function (x) { return !x.ok; });
+  $("res-review").innerHTML = wrong.length ? wrong.slice(0, 8).map(function (x) {
+    var what = G.mode === "train" ? x.errs.join("; ") : (x.cat === "timeout" ? "Ran out of time" : ERR["b_" + x.cat].label);
+    return "<li>" + fullHTML(x.r) + '<br><span class="you">' + esc(what) + '</span><br><span class="key">' + (x.kind === "spec" ? "Spectator ions: " + listNames(x.r.A.spect) : eqHTML(x.r.A.rL, x.r.A.rR)) + "</span></li>";
+  }).join("") : "<li>Nothing to review. Every one was right.</li>";
+  var best = load("best", {}), bk = G.mode + "_" + G.lv, score = G.mode === "train" ? pct : G.points;
+  if (best[bk] == null || score > best[bk]) { best[bk] = score; store("best", best); }
+  if (G.mode === "train" && pct >= 85) Confetti.go();
+  $("btn-toboss").hidden = G.mode === "boss";
+  sendResults(S);
+}
+function buildPayload(S) {
+  var lvName = G.lv === "hard" ? "Pure Chemistry" : "Combined Science";
+  var types = Object.keys(TYPES).filter(function (k) { return S.typeStat[k][1]; }).map(function (k) { return TYPES[k] + " " + S.typeStat[k][0] + "/" + S.typeStat[k][1]; }).join(", ");
+  var errs = S.errs.length ? S.errs.map(function (k) { return ERR[k].label + " x" + G.err[k]; }).join("; ") : "none";
+  var summary = "Mode: " + (G.mode === "train" ? "Training" : "Boss " + (B.win ? "(won)" : "(lost)")) + " | Level: " + lvName +
+    (G.mode === "train" ? " | Steps: " + STEP_NAMES.map(function (n, i) { return n + " " + S.steps[i] + "/" + T.res.length; }).join(", ") + " | Table hints: " + G.hints : " | Best combo: " + B.bestCombo) +
+    " | By type: " + types + " | Errors: " + errs;
+  var wrong = G.log.filter(function (x) { return !x.ok; }).map(function (x) {
+    var eq = x.r.src.replace(/\(aq\)|\(s\)|\(l\)|\(g\)/g, "");
+    return G.mode === "train" ? eq + ": " + x.errs.join(", ") : eq + ": " + (x.kind === "spec" ? "[spectators] " : "") + (x.cat === "timeout" ? "timed out" : ERR["b_" + x.cat].label);
+  }).join(" | ");
+  return {
+    course: SHEET_TAB, chapter: "Ionic equations · " + (G.mode === "train" ? "Training" : "Boss fight") + " · " + lvName,
+    name: G.student.name, cls: G.student.cls, reg: G.student.reg,
+    score: S.correct, total: S.total, wrong: wrong || "None",
+    time: Math.round(S.secs), points: G.points, summary: summary
+  };
+}
+function post(payload) { return fetch(SUBMIT_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }); }
+function sendResults(S) {
+  var payload = G.payload = buildPayload(S), box = $("send"), msg = $("send-msg"), btn = $("btn-resend");
+  box.className = "send span"; btn.hidden = true;
+  if (!SUBMIT_URL) { msg.textContent = "Results not sent (no Google Sheet link set up)."; return; }
+  msg.textContent = "Sending your results to Ms Khoo…";
+  post(payload).then(function () { msg.textContent = "✓ Sent! Ms Khoo has your results."; })
+    .catch(function () { box.className = "send span err"; msg.textContent = "Couldn't send. Check your internet, then tap Try again."; btn.hidden = false; });
+}
+$("btn-resend").addEventListener("click", function () {
+  var box = $("send"); $("btn-resend").hidden = true; $("send-msg").textContent = "Sending…";
+  post(G.payload).then(function () { box.className = "send span"; $("send-msg").textContent = "✓ Sent! Ms Khoo has your results."; })
+    .catch(function () { $("send-msg").textContent = "Still couldn't send. Try again when you're online."; $("btn-resend").hidden = false; });
+});
+$("btn-again").addEventListener("click", function () { Confetti.stop(); if (G.mode === "train") startTraining(G.student); else startBoss(G.student); });
+$("btn-toboss").addEventListener("click", function () { Confetti.stop(); startBoss(G.student); });
+$("btn-home").addEventListener("click", function () { Confetti.stop(); show("scr-start"); paintStart(); });
+
+if (location.hash === "#debug") window.__IQ = { T: function () { return T; }, B: function () { return B; } };
+
+/* =================== CONFETTI =================== */
+var Confetti = {
+  c: $("confetti"), p: [], on: false,
+  go: function () {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var c = this.c, w = c.width = innerWidth, h = c.height = innerHeight, cols = ["#FF8243", "#FFC0CB", "#FCE883", "#069494", "#1F2A2E"];
+    c.hidden = false; this.on = true; this.p = [];
+    for (var i = 0; i < 110; i++) this.p.push({ x: Math.random() * w, y: -Math.random() * h, s: 6 + Math.random() * 8, v: 2 + Math.random() * 3, a: Math.random() * 6, col: cols[i % cols.length] });
+    var self = this, ctx = c.getContext("2d"), t0 = performance.now();
+    (function frame(t) {
+      if (!self.on) return;
+      ctx.clearRect(0, 0, w, h);
+      self.p.forEach(function (p) { p.y += p.v; p.a += .1; ctx.fillStyle = p.col; ctx.fillRect(p.x + Math.sin(p.a) * 6, p.y, p.s, p.s * .6); });
+      if (t - t0 < 4000) requestAnimationFrame(frame); else self.stop();
+    })(t0);
+  },
+  stop: function () { this.on = false; this.c.hidden = true; }
+};
+
+})();
+</script>
+</body>
+</html>
