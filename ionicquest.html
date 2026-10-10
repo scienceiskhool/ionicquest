@@ -227,6 +227,9 @@ body.dark footer a { color: var(--neon-teal); }
 .stars { position: absolute; inset: 0; background-image: radial-gradient(1.5px 1.5px at 12% 20%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 38% 12%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 62% 28%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 84% 10%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 92% 34%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 24% 40%, #fff 50%, transparent 51%); opacity: .7; }
 .sprite { position: relative; z-index: 1; image-rendering: pixelated; }
 .sprite svg, .sprite img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+.hero-sp.pic { width: 100px; height: 118px; }
+.mon-sp.pic { width: 168px; height: 150px; }
+.sprite.pic img { width: 100%; height: 100%; object-fit: contain; object-position: center bottom; image-rendering: auto; }
 .hero-sp { width: 86px; animation: bob 1s steps(2) infinite; }
 .mon-sp { width: 150px; animation: bob 1.4s steps(2) infinite; }
 @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
@@ -285,6 +288,8 @@ body.dark footer a { color: var(--neon-teal); }
   .stage { height: 250px; }
   .hero-sp { width: 110px; }
   .mon-sp { width: 200px; }
+  .hero-sp.pic { width: 130px; height: 152px; }
+  .mon-sp.pic { width: 230px; height: 200px; }
   .bhud { font-size: .72rem; }
 }
 
@@ -294,6 +299,9 @@ body.dark footer a { color: var(--neon-teal); }
 .bend p { margin: 0; font-weight: 600; max-width: 36ch; }
 .bend .sprite { width: 120px; }
 .bend .row { justify-content: center; }
+.bend .sprite.down { opacity: .35; filter: grayscale(1); transform: rotate(-90deg); }
+.bend-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.hits-left { color: #fff; }
 .start-blink { font-family: var(--pixel); font-size: .6rem; color: var(--neon-teal); animation: blink 1s steps(1) infinite; }
 
 /* ---------- results ---------- */
@@ -384,7 +392,7 @@ canvas#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-
       </div>
       <div class="modes">
         <div class="mode-card"><b>Training</b><span>5 equations. Add states, split, cancel spectators, simplify.</span></div>
-        <div class="mode-card dark"><b>BOSS FIGHT</b><span>Answer before SPECTRON finishes charging. Correct answers hit back.</span></div>
+        <div class="mode-card dark"><b>BOSS FIGHT</b><span>3 hearts. Land 6 hits to win (8 for Pure Chemistry) before SPECTRON knocks you out.</span></div>
       </div>
     </div>
 
@@ -438,7 +446,7 @@ canvas#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-
       <div class="stars"></div>
       <div class="bhud">
         <div class="hp-who"><span class="hname">HERO</span><div class="hearts" id="b-hearts"></div></div>
-        <div class="hp-who boss-side"><span class="bname" id="b-name">SPECTRON</span><div class="hpbar"><i id="b-hp"></i></div></div>
+        <div class="hp-who boss-side"><span class="bname"><span id="b-name">SPECTRON</span> <span class="hits-left" id="b-left"></span></span><div class="hpbar"><i id="b-hp"></i></div></div>
       </div>
       <div class="stage" id="b-stage">
         <div class="sprite hero-sp" id="b-hero"></div>
@@ -462,7 +470,10 @@ canvas#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-
     <div class="sprite" id="be-sprite"></div>
     <p id="be-msg"></p>
     <span class="start-blink">PRESS BUTTON TO CONTINUE</span>
-    <button class="pbtn" type="button" id="be-go">SEE RESULTS ▶</button>
+    <div class="bend-btns">
+      <button class="pbtn" type="button" id="be-retry" hidden>TRY AGAIN ↻</button>
+      <button class="pbtn" type="button" id="be-go">SEE RESULTS ▶</button>
+    </div>
   </section>
 
   <!-- RESULTS -->
@@ -525,14 +536,17 @@ var SUBMIT_URL = "https://script.google.com/macros/s/AKfycbxCTjRCQzLlWXmmY-5R0p7
 var SHEET_TAB = "Ionic Equations";    // tab name in your Google Sheet
 var TRAIN_ROUNDS = 5;                 // equations per training game
 var BOSS_NAME = "SPECTRON";
-var BOSS_HP = 100;
 var MUSIC_VOLUME = 0.35;              // boss music volume, 0 to 1 (file: Pixel Battle.mp3 in the same folder)
-var HIT = 15, CRIT = 25, CRIT_SECS = 12;  // damage per correct answer; crit if answered within CRIT_SECS
+var HITS_TO_WIN = { easy: 6, hard: 8 };  // correct answers needed to defeat the boss (easy = Combined Science, hard = Pure Chemistry)
+var CRIT_SECS = 12;                       // answering within this many seconds is a critical hit (bonus points only)
 var BOSS_SECS = { easy: 45, hard: 35 };   // seconds before the boss attacks
-var HEARTS = { easy: 4, hard: 3 };
+var HEARTS = { easy: 3, hard: 3 };       // wrong answers allowed before "YOU DIED"
 // Optional: paste image URLs (e.g. files in your GitHub repo) to replace the built-in pixel sprites
-var HERO_IMG = "";
-var BOSS_IMG = "";
+var HERO_IMG = "hero.png";
+var HERO_HURT_IMG = "hero%20hurt.png";   // shown for HURT_MS after a wrong answer
+var BOSS_IMG = "boss.png";
+var BOSS_HURT_IMG = "boss%20hurt.png";   // shown for HURT_MS after a correct answer
+var HURT_MS = 2000;
 var CLASSES = [];
 ["S1", "S2", "S3", "S4"].forEach(function (l) {
   ["Charity", "Courage", "Faith", "Hope", "Humility", "Integrity", "Love", "Respect", "Joy"].forEach(function (v) { CLASSES.push(l + " " + v); });
@@ -828,10 +842,32 @@ function pixelSVG(map, pal) {
   map.forEach(function (row, y) { w = Math.max(w, row.length); for (var x = 0; x < row.length; x++) { var c = pal[row[x]]; if (c) r += '<rect x="' + x + '" y="' + y + '" width="1.02" height="1.02" fill="' + c + '"/>'; } });
   return '<svg viewBox="0 0 ' + w + " " + map.length + '" shape-rendering="crispEdges" aria-hidden="true">' + r + "</svg>";
 }
-function heroArt() { return HERO_IMG ? '<img src="' + esc(HERO_IMG) + '" alt="">' : pixelSVG(HERO_MAP, HERO_PAL); }
-function monArt() { return BOSS_IMG ? '<img src="' + esc(BOSS_IMG) + '" alt="">' : pixelSVG(MON_MAP, MON_PAL); }
-$("b-hero").innerHTML = heroArt();
-$("b-mon").innerHTML = monArt() + '<span class="orbit" style="left:-14px;top:30%">+</span><span class="orbit" style="right:-10px;top:10%;animation-delay:.5s">−</span><span class="orbit" style="right:6%;bottom:-6px;animation-delay:1s">2+</span>';
+// Sprite images. If an image file is missing, the built-in pixel sprite is used instead.
+var IMG_OK = {};
+function art(src, map, pal) { return src && IMG_OK[src] !== false ? '<img src="' + esc(src) + '" alt="">' : pixelSVG(map, pal); }
+function heroArt(hurt) { return art(hurt && IMG_OK[HERO_HURT_IMG] ? HERO_HURT_IMG : HERO_IMG, HERO_MAP, HERO_PAL); }
+function monArt(hurt) { return art(hurt && IMG_OK[BOSS_HURT_IMG] ? BOSS_HURT_IMG : BOSS_IMG, MON_MAP, MON_PAL); }
+var ORBITS = '<span class="orbit" style="left:-14px;top:30%">+</span><span class="orbit" style="right:-10px;top:10%;animation-delay:.5s">−</span><span class="orbit" style="right:6%;bottom:-6px;animation-delay:1s">2+</span>';
+function paintSprites() {
+  var heroImg = IMG_OK[HERO_IMG] !== false && HERO_IMG, monImg = IMG_OK[BOSS_IMG] !== false && BOSS_IMG;
+  $("b-hero").innerHTML = heroArt(); $("b-hero").classList.toggle("pic", !!heroImg);
+  $("b-mon").innerHTML = monArt() + (monImg ? "" : ORBITS); $("b-mon").classList.toggle("pic", !!monImg);
+}
+[HERO_IMG, HERO_HURT_IMG, BOSS_IMG, BOSS_HURT_IMG].forEach(function (src) { // preload so the swap is instant
+  if (!src) return;
+  var im = new Image();
+  im.onload = function () { IMG_OK[src] = true; };
+  im.onerror = function () { IMG_OK[src] = false; if (src === HERO_IMG || src === BOSS_IMG) paintSprites(); };
+  im.src = src;
+});
+paintSprites();
+var hurtTimers = {};
+function showHurt(id, src) {
+  var img = $(id).querySelector("img"); if (!img || !src || IMG_OK[src] === false) return;
+  var base = id === "b-hero" ? HERO_IMG : BOSS_IMG;
+  clearTimeout(hurtTimers[id]); img.src = src;
+  hurtTimers[id] = setTimeout(function () { var i = $(id).querySelector("img"); if (i) i.src = base; }, HURT_MS);
+}
 $("b-bolt").innerHTML = pixelSVG(BOLT_MAP, BOLT_PAL);
 $("b-name").textContent = BOSS_NAME;
 
@@ -862,10 +898,11 @@ var Music = {
   el: $("music"), on: load("music", true), vol: MUSIC_VOLUME,
   inBoss: function () { return !$("scr-boss").hidden; },
   play: function () { if (!this.on) return; try { this.el.volume = this.vol; var p = this.el.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {} },
-  stop: function () { try { this.el.pause(); this.el.currentTime = 0; } catch (e) {} },
+  stop: function () { clearInterval(this.fade); try { this.el.pause(); this.el.currentTime = 0; this.el.volume = this.vol; } catch (e) {} },
   fadeOut: function () {
     var el = this.el, self = this, v = el.volume;
-    var t = setInterval(function () { v -= .03; if (v <= 0) { clearInterval(t); self.stop(); el.volume = self.vol; } else el.volume = v; }, 60);
+    clearInterval(this.fade);
+    this.fade = setInterval(function () { v -= .03; if (v <= 0) self.stop(); else el.volume = v; }, 60);
   }
 };
 function paintSound() {
@@ -1189,16 +1226,18 @@ var B = null, raf = 0;
 function heartSVG() { return pixelSVG(HEART_MAP, HEART_PAL); }
 function startBoss(student) {
   newSession(student, "boss");
-  B = { hp: BOSS_HP, hearts: HEARTS[G.lv], max: HEARTS[G.lv], n: 0, correct: 0, pool: poolFor(40), pi: 0, phase2: false, combo: 0, bestCombo: 0 };
+  B = { hp: HITS_TO_WIN[G.lv], maxhp: HITS_TO_WIN[G.lv], hearts: HEARTS[G.lv], max: HEARTS[G.lv], n: 0, correct: 0, pool: poolFor(40), pi: 0, phase2: false, combo: 0, bestCombo: 0 };
   show("scr-boss"); Music.stop(); Music.play();
   $("b-hero").className = "sprite hero-sp"; $("b-mon").className = "sprite mon-sp";
+  clearTimeout(hurtTimers["b-hero"]); clearTimeout(hurtTimers["b-mon"]); paintSprites();
   paintBossHud(); nextQ();
 }
 function paintBossHud(breakIdx) {
   var h = "";
   for (var i = 0; i < B.max; i++) h += '<span class="' + (i >= B.hearts ? "lost" : "") + (i === breakIdx ? " breaking" : "") + '">' + heartSVG() + "</span>";
   $("b-hearts").innerHTML = h;
-  var p = Math.max(0, B.hp) / BOSS_HP * 100;
+  var p = Math.max(0, B.hp) / B.maxhp * 100;
+  $("b-left").textContent = "· " + Math.max(0, B.hp) + (B.hp === 1 ? " HIT" : " HITS") + " LEFT";
   $("b-hp").style.width = p + "%";
   $("b-hp").className = p <= 30 ? "low" : "";
 }
@@ -1243,21 +1282,21 @@ function answer(i) {
   var r = q.r, A = r.A, msg;
   if (ok) {
     B.correct++; B.combo++; B.bestCombo = Math.max(B.bestCombo, B.combo);
-    var crit = el <= CRIT_SECS, dmg = crit ? CRIT : HIT;
-    B.hp = Math.max(0, B.hp - dmg);
+    var crit = el <= CRIT_SECS;
+    B.hp = Math.max(0, B.hp - 1);
     G.points += (crit ? 150 : 100) + Math.round(Math.max(0, B.secs - el)) * 5;
     retrigger($("b-hero"), "atk"); retrigger($("b-bolt"), "fly");
-    setTimeout(function () { retrigger($("b-mon"), "hit"); floatText((crit ? "CRIT! " : "") + "-" + dmg, true); Sound.hit(); paintBossHud(); }, 380);
-    msg = '<span class="ans">' + (crit ? "Critical hit!" : "Direct hit!") + "</span> " + (q.kind === "spec" ? "Spectators: " + listNames(A.spect) + "." : (A.spect.length ? "Spectators " + listNames(A.spect) + " cancelled" : "") + (A.g > 1 ? ", then ÷" + A.g + "." : "."));
+    setTimeout(function () { showHurt("b-mon", BOSS_HURT_IMG); retrigger($("b-mon"), "hit"); floatText(crit ? "CRITICAL!" : "HIT!", true); Sound.hit(); paintBossHud(); }, 380);
+    msg = '<span class="ans">' + (crit ? "Critical hit! Speed bonus." : "Direct hit!") + "</span> " + (B.hp > 0 ? B.hp + " more to go. " : "") + (q.kind === "spec" ? "Spectators: " + listNames(A.spect) + "." : (A.spect.length ? "Spectators " + listNames(A.spect) + " cancelled" : "") + (A.g > 1 ? ", then ÷" + A.g + "." : "."));
   } else {
     B.combo = 0; B.hearts--;
     retrigger($("b-mon"), "atk");
-    setTimeout(function () { retrigger($("b-hero"), "hit"); retrigger($("b-flash"), "on"); floatText("-1 ♥", false, true); Sound.hurt(); paintBossHud(B.hearts); }, 300);
+    setTimeout(function () { showHurt("b-hero", HERO_HURT_IMG); retrigger($("b-hero"), "hit"); retrigger($("b-flash"), "on"); floatText("-1 ♥", false, true); Sound.hurt(); paintBossHud(B.hearts); }, 300);
     addErr("b_" + cat);
     msg = explain(q, cat, o) + '<br><span class="ans">Answer: ' + (q.kind === "spec" ? listNames(A.spect) : eqHTML(A.rL, A.rR)) + "</span>";
   }
   G.log.push({ ok: ok, r: r, kind: q.kind, cat: cat, secs: +el.toFixed(1), picked: o ? stripTags(o.html) : "(no answer)" });
-  if (!B.phase2 && B.hp > 0 && B.hp <= BOSS_HP / 2) {
+  if (!B.phase2 && B.hp > 0 && B.hp <= B.maxhp / 2) {
     B.phase2 = true;
     setTimeout(function () { var p = document.createElement("div"); p.className = "phase"; p.textContent = BOSS_NAME + " IS ANGRY!"; $("b-stage").appendChild(p); setTimeout(function () { p.remove(); }, 2200); }, 700);
   }
@@ -1287,22 +1326,27 @@ function bossEnd() {
   stopBossTimer(); Music.fadeOut();
   var win = B.hp <= 0;
   B.win = win;
-  if (win) { $("b-mon").classList.add("dead"); }
+  if (win) $("b-mon").classList.add("dead"); else $("b-hero").classList.add("dead");
+  finish(true); // log this attempt now, so retries are recorded too
   setTimeout(function () {
     show("scr-bend");
     $("scr-bend").className = "bend" + (win ? "" : " lose");
-    $("be-title").textContent = win ? "VICTORY!" : "GAME OVER";
-    $("be-sprite").innerHTML = win ? heroArt() : monArt();
-    $("be-msg").textContent = win ? BOSS_NAME + " has been cancelled out, just like a spectator ion. " + B.correct + " hits in " + B.n + " attacks." : BOSS_NAME + " wins this round. You landed " + B.correct + " hits. Train up and try again!";
+    $("be-title").textContent = win ? "VICTORY!" : "YOU DIED";
+    $("be-sprite").innerHTML = heroArt(!win);
+    $("be-sprite").className = "sprite" + (win || (HERO_HURT_IMG && IMG_OK[HERO_HURT_IMG]) ? "" : " down");
+    $("be-msg").textContent = win ? BOSS_NAME + " has been cancelled out, just like a spectator ion. " + B.correct + " hits in " + B.n + " attacks." :
+      BOSS_NAME + " knocked you out. You landed " + B.correct + " of " + B.maxhp + " hits. Try again!";
+    $("be-retry").hidden = win;
     if (win) { Sound.win(); Confetti.go(); } else Sound.lose();
-  }, win ? 700 : 300);
+  }, win ? 700 : 500);
 }
-$("be-go").addEventListener("click", function () { Confetti.stop(); finish(); });
+$("be-go").addEventListener("click", function () { Confetti.stop(); show("scr-result"); });
+$("be-retry").addEventListener("click", function () { startBoss(G.student); });
 
 /* =================== RESULTS =================== */
-function finish() {
+function finish(silent) {
   var secs = (Date.now() - G.t0) / 1000, S = { secs: secs };
-  show("scr-result");
+  if (!silent) show("scr-result");
   var bars = [], typeStat = {};
   Object.keys(TYPES).forEach(function (k) { typeStat[k] = [0, 0]; });
   if (G.mode === "train") {
@@ -1332,7 +1376,7 @@ function finish() {
     sub = S.correct + " of " + S.total + " steps right first time across " + T.res.length + " equations. " + (pct >= 75 ? "You're ready for the boss." : "Try another round before the boss.");
   } else {
     title = B.win ? BOSS_NAME + " defeated!" : BOSS_NAME + " survived";
-    sub = B.correct + " hits from " + B.n + " attacks. Best combo " + B.bestCombo + ".";
+    sub = B.correct + " hits from " + B.n + " attacks (" + B.maxhp + " needed to win). Best combo " + B.bestCombo + ".";
   }
   $("res-title").textContent = title; $("res-sub").textContent = sub;
   $("res-correct").textContent = S.correct + "/" + S.total;
@@ -1354,7 +1398,7 @@ function finish() {
   }).join("") : "<li>Nothing to review. Every one was right.</li>";
   var best = load("best", {}), bk = G.mode + "_" + G.lv, score = G.mode === "train" ? pct : G.points;
   if (best[bk] == null || score > best[bk]) { best[bk] = score; store("best", best); }
-  if (G.mode === "train" && pct >= 85) Confetti.go();
+  if (G.mode === "train" && pct >= 85 && !silent) Confetti.go();
   $("btn-toboss").hidden = G.mode === "boss";
   sendResults(S);
 }
