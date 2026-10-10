@@ -58,6 +58,7 @@ sup { font-size: .68em; line-height: 0; position: relative; top: -.1em; vertical
 .icon-btn { width: 42px; height: 42px; border-radius: 12px; border: var(--b); background: #fff; display: grid; place-items: center; box-shadow: 0 3px 0 var(--ink); padding: 0; flex: none; }
 .icon-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
 .icon-btn svg { width: 20px; height: 20px; }
+.icon-btn.off { opacity: .45; }
 
 /* ---------- top bar ---------- */
 .topbar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 2px solid var(--line); background: #fff; }
@@ -350,6 +351,8 @@ canvas#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-
 </head>
 <body>
 
+<audio id="music" loop preload="none" src="Pixel%20Battle.mp3"></audio>
+
 <header class="topbar">
   <a class="brand" href="https://scienceiskhool.github.io/scienceiskhool/" target="_blank" rel="noopener">
     <img src="https://scienceiskhool.github.io/scienceiskhool/assets/img/head.png" alt="" onerror="this.style.visibility='hidden'">
@@ -358,7 +361,10 @@ canvas#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-
   <button class="icon-btn" id="btn-quit" type="button" aria-label="Back to start" title="Back to start" hidden>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8"/><path d="M5 10v10h14V10"/></svg>
   </button>
-  <button class="icon-btn" id="btn-sound" type="button" aria-label="Sound on" title="Sound">
+  <button class="icon-btn" id="btn-music" type="button" aria-label="Boss music on" title="Boss music">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+  </button>
+  <button class="icon-btn" id="btn-sound" type="button" aria-label="Sound effects on" title="Sound effects">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
   </button>
 </header>
@@ -520,6 +526,7 @@ var SHEET_TAB = "Ionic Equations";    // tab name in your Google Sheet
 var TRAIN_ROUNDS = 5;                 // equations per training game
 var BOSS_NAME = "SPECTRON";
 var BOSS_HP = 100;
+var MUSIC_VOLUME = 0.35;              // boss music volume, 0 to 1 (file: Pixel Battle.mp3 in the same folder)
 var HIT = 15, CRIT = 25, CRIT_SECS = 12;  // damage per correct answer; crit if answered within CRIT_SECS
 var BOSS_SECS = { easy: 45, hard: 35 };   // seconds before the boss attacks
 var HEARTS = { easy: 4, hard: 3 };
@@ -851,8 +858,26 @@ var Sound = {
   win: function () { [523, 659, 784, 1047, 784, 1047].forEach(function (n, i) { Sound.tone(n, "square", .14, .06, i * .12); }); },
   lose: function () { [392, 330, 262, 196].forEach(function (n, i) { Sound.tone(n, "square", .22, .06, i * .2); }); }
 };
-function paintSound() { $("btn-sound").setAttribute("aria-label", Sound.on ? "Sound on" : "Sound off"); $("btn-sound").style.opacity = Sound.on ? 1 : .45; }
+var Music = {
+  el: $("music"), on: load("music", true), vol: MUSIC_VOLUME,
+  inBoss: function () { return !$("scr-boss").hidden; },
+  play: function () { if (!this.on) return; try { this.el.volume = this.vol; var p = this.el.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {} },
+  stop: function () { try { this.el.pause(); this.el.currentTime = 0; } catch (e) {} },
+  fadeOut: function () {
+    var el = this.el, self = this, v = el.volume;
+    var t = setInterval(function () { v -= .03; if (v <= 0) { clearInterval(t); self.stop(); el.volume = self.vol; } else el.volume = v; }, 60);
+  }
+};
+function paintSound() {
+  $("btn-sound").classList.toggle("off", !Sound.on); $("btn-sound").setAttribute("aria-label", Sound.on ? "Sound effects on" : "Sound effects off");
+  $("btn-music").classList.toggle("off", !Music.on); $("btn-music").setAttribute("aria-label", Music.on ? "Boss music on" : "Boss music off");
+}
 $("btn-sound").addEventListener("click", function () { Sound.on = !Sound.on; store("sound", Sound.on); paintSound(); });
+$("btn-music").addEventListener("click", function () {
+  Music.on = !Music.on; store("music", Music.on); paintSound();
+  if (!Music.on) Music.el.pause(); else if (Music.inBoss()) Music.play();
+});
+document.addEventListener("visibilitychange", function () { if (document.hidden) Music.el.pause(); else if (Music.inBoss()) Music.play(); });
 paintSound();
 
 /* =================== START SCREEN =================== */
@@ -895,7 +920,7 @@ function readStudent() {
 }
 $("btn-train").addEventListener("click", function () { var s = readStudent(); if (s) { Sound.tone(1, "sine", .01, .0001); startTraining(s); } });
 $("btn-boss").addEventListener("click", function () { var s = readStudent(); if (s) { Sound.tone(1, "sine", .01, .0001); startBoss(s); } });
-$("btn-quit").addEventListener("click", function () { stopBossTimer(); Confetti.stop(); show("scr-start"); paintStart(); });
+$("btn-quit").addEventListener("click", function () { stopBossTimer(); Music.stop(); Confetti.stop(); show("scr-start"); paintStart(); });
 $("form-start").addEventListener("submit", function (e) { e.preventDefault(); });
 
 function poolFor(n) {
@@ -1165,7 +1190,7 @@ function heartSVG() { return pixelSVG(HEART_MAP, HEART_PAL); }
 function startBoss(student) {
   newSession(student, "boss");
   B = { hp: BOSS_HP, hearts: HEARTS[G.lv], max: HEARTS[G.lv], n: 0, correct: 0, pool: poolFor(40), pi: 0, phase2: false, combo: 0, bestCombo: 0 };
-  show("scr-boss");
+  show("scr-boss"); Music.stop(); Music.play();
   $("b-hero").className = "sprite hero-sp"; $("b-mon").className = "sprite mon-sp";
   paintBossHud(); nextQ();
 }
@@ -1259,7 +1284,7 @@ function explain(q, cat, o) {
 }
 $("b-next").addEventListener("click", function () { if (B.hp <= 0 || B.hearts <= 0) bossEnd(); else nextQ(); });
 function bossEnd() {
-  stopBossTimer();
+  stopBossTimer(); Music.fadeOut();
   var win = B.hp <= 0;
   B.win = win;
   if (win) { $("b-mon").classList.add("dead"); }
